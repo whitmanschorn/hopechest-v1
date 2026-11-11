@@ -35,13 +35,15 @@ test("a member signs in with a texted code, then signs out @smoke", async ({ pag
   await enterCode(page, code);
 
   await expect(page).toHaveURL(/\/home$/);
+  await page.getByTestId("user-menu").click();
   await expect(page.getByTestId("signed-in-as")).toContainText("0101");
   await expect(page.getByTestId("role-badge")).toHaveText(/admin/i);
 
   // The session survives a reload.
   await page.reload();
-  await expect(page.getByTestId("signed-in-as")).toBeVisible();
+  await expect(page.getByTestId("home-title")).toBeVisible();
 
+  await page.getByTestId("user-menu").click();
   await page.getByTestId("sign-out").click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/home");

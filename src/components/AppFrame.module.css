@@ -1,0 +1,5 @@
+.header,
+.navbar {
+  background-color: var(--hc-surface);
+  border-color: var(--hc-hairline);
+}
