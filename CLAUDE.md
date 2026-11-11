@@ -62,6 +62,11 @@ work, CI and staging. Specs may rely on it being present and may add rows, but m
 delete seeded rows. Changing a seeded fact means editing the seed file and noting why in
 `seed/bluth/CORRECTIONS.md`.
 
+Vercel CLI commands that pull settings (`vercel env pull`, `vercel blob create-store`, `vercel
+link`) overwrite `.env.local` with the hosted database's address. Check it afterwards and restore
+it from `.env.example`. The app refuses to start in development against a database that is not
+local.
+
 `npm run db:reset` erases data, so Prisma refuses it from an agent without the owner's say-so.
 Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing anything.
 

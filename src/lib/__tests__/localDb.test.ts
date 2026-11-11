@@ -1,4 +1,4 @@
-import { databaseHost, isLocalDatabase } from "../lib/localDb";
+import { databaseHost, isLocalDatabase } from "../localDb";
 
 describe("isLocalDatabase", () => {
   it("accepts the local Docker database", () => {
