@@ -69,6 +69,14 @@ text alone.
 - Server components cannot pass `component={Link}` to Mantine; use
   `src/components/LinkButton.tsx`.
 
+## UI
+
+- Signed-in pages render inside `src/components/AppFrame.tsx`. Add a page's menu entry to
+  `src/components/nav.ts` in the same pull request as the page.
+- Colours come from the theme (`src/theme.ts`): use Mantine props and variables
+  (`c="dimmed"`, `var(--hc-surface)`, `var(--hc-hairline)`), not hex values, so dark mode works.
+- Specs sign in with `signIn(page)` from `e2e/support/auth.ts`.
+
 ## Working in parallel
 
 One work item = one git worktree = one branch = one pull request. Branch from the latest `main`.

@@ -6,10 +6,8 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
-import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/core";
-import { ModalsProvider } from "@mantine/modals";
-import { Notifications } from "@mantine/notifications";
-import { theme } from "@/theme";
+import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
+import { Providers } from "@/components/Providers";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -31,12 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body>
-        <MantineProvider theme={theme} defaultColorScheme="auto">
-          <ModalsProvider>
-            <Notifications />
-            {children}
-          </ModalsProvider>
-        </MantineProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
