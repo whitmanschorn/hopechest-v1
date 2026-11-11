@@ -29,12 +29,27 @@ In its Vercel project (production environment):
   values.
 - `DATABASE_URL`, `DATABASE_URL_UNPOOLED`: set by the Neon integration
 - Twilio variables (see `.env.example`); required when `HOPECHEST_ENV=production`
-- staging only: `TEST_LOGIN_CODE` (sensitive)
+- staging only: `TEST_LOGIN_CODE` and `DEMO_PASSWORD` (both sensitive)
 
 ## Signing in on staging
 
 Staging's address is public, so it never shows codes on screen. Test numbers such as
-(202) 555-0101 (an admin) sign in with the six-digit `TEST_LOGIN_CODE` instead. To run specs
+(202) 555-0101 (an admin) sign in with the six-digit `TEST_LOGIN_CODE` instead. The same code works for (202) 555-0104 (George Michael, can add and edit) and (202) 555-0105
+(Maeby, read-only).
+
+## Letting someone look around staging
+
+Send them https://hopechest-staging.vercel.app/try and the demo password (`DEMO_PASSWORD`, kept
+in the staging project on Vercel and in your local `.env.staging.local`). They pick any family
+member and whether they can edit, and are signed in as that person for twelve hours or until
+they sign out. They need no phone and cannot get admin access. Changes they make show in
+histories as "A demo visitor".
+
+The door exists only where `DEMO_PASSWORD` is set to at least 12 characters, and never on a
+family site, whatever is set there. To close it, remove the variable and redeploy; to shut out
+people who already have the password, change it.
+
+To run specs
 against staging:
 
 ```sh

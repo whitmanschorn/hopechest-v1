@@ -13,6 +13,8 @@ export const LIMITS = {
   codePerIp: { max: 30, windowMs: HOUR },
   /** Wrong guesses at the code for one phone number. */
   verifyPerPhone: { max: 10, windowMs: HOUR },
+  /** Wrong guesses at the demo password from one network address. */
+  demoPerIp: { max: 10, windowMs: HOUR },
 } as const satisfies Record<string, Limit>;
 
 /** True when one more attempt is allowed, given when earlier ones happened. */

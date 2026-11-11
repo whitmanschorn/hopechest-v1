@@ -77,6 +77,10 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - 555-01xx numbers (and `TEST_PHONE_ALLOWLIST`) are test numbers: outside production their codes
   appear on screen instead of being texted. Specs sign in with them; `(202) 555-0101` is the admin.
   Production always uses Twilio and never shows a code.
+- The demo door (`/try`): where `DEMO_PASSWORD` is set, anyone with it can sign in as any family
+  member, as a viewer or contributor, without a phone. Such a session belongs to one shared
+  "demo-visitor" account and carries the person it stands in for (`src/lib/auth/viewAs.ts`).
+  Never honoured in production.
 - Pages under `src/app/(app)/` need a session. Read it with `requireUser()` / `requireActor()`
   from `src/server/auth/session.ts`, inside a `<Suspense>` boundary (the `(app)` layout provides
   one).
