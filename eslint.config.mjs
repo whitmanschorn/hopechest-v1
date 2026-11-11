@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     ".vercel/**",
+    // Sub-agents work in git worktrees here, each with its own build output.
+    ".claude/**",
+    ".data/**",
   ]),
 ]);
 

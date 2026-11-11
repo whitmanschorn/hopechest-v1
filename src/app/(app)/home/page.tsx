@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: "Home · Hopechest" };
 
 const COUNTS: { key: keyof ChestSummary; one: string; many: string }[] = [
   { key: "people", one: "person", many: "people" },
+  { key: "photos", one: "photo", many: "photos" },
   { key: "events", one: "event", many: "events" },
   { key: "places", one: "place", many: "places" },
   { key: "documents", one: "document", many: "documents" },
@@ -29,7 +30,7 @@ export default async function HomePage() {
               : "What the chest holds so far."}
           </Text>
         </Stack>
-        <SimpleGrid cols={{ base: 2, sm: 4 }} data-testid="home-summary">
+        <SimpleGrid cols={{ base: 2, xs: 3, sm: 5 }} data-testid="home-summary">
           {COUNTS.map(({ key, one, many }) => (
             <Paper key={key} p="md" radius="md" withBorder bg="var(--hc-surface)">
               <Text fz={32} fw={600} lh={1.1} data-testid={`home-count-${key}`}>

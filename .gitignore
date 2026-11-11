@@ -50,3 +50,6 @@ next-env.d.ts
 .claude/settings.local.json
 .claude/worktrees/
 /src/generated/
+
+# files stored locally in development
+/.data/
