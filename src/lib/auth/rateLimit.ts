@@ -11,7 +11,7 @@ export const LIMITS = {
   codePerPhone: { max: 5, windowMs: HOUR },
   /** Code requests from one network address, across all numbers. */
   codePerIp: { max: 30, windowMs: HOUR },
-  /** Wrong-or-right guesses at the code for one phone number. */
+  /** Wrong guesses at the code for one phone number. */
   verifyPerPhone: { max: 10, windowMs: HOUR },
 } as const satisfies Record<string, Limit>;
 
