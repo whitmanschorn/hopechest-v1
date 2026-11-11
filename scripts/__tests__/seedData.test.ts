@@ -120,6 +120,32 @@ describe("validateSeed", () => {
   });
 });
 
+describe("seed users", () => {
+  it("accepts fictional numbers tied to people", () => {
+    const data = {
+      ...tiny(),
+      users: [{ phone: "+12025550101", role: "admin" as const, person: "ann" }],
+    };
+    expect(validateSeed(data)).toEqual([]);
+  });
+
+  it("rejects real-looking numbers, unknown people and shared people", () => {
+    const data = {
+      ...tiny(),
+      users: [
+        { phone: "+14155551234", role: "admin" as const, person: "ann" },
+        { phone: "+12025550102", role: "viewer" as const, person: "ann" },
+        { phone: "+12025550103", role: "viewer" as const, person: "zed" },
+      ],
+    };
+    expect(validateSeed(data)).toEqual([
+      'user "+14155551234": seed accounts must use a fictional 555-01xx number',
+      'user "+12025550103": no person "zed"',
+      'two users claim the person "ann"',
+    ]);
+  });
+});
+
 describe("resolveDate", () => {
   it("keeps the deduction and its clue", () => {
     expect(resolveDate({ value: "c. 1964", deduced: true, clue: "first child born 1965" })).toEqual(
@@ -189,6 +215,7 @@ describe.each(readdirSync("seed").filter((name) => existsSync(join("seed", name,
       relationships: read("relationships.json"),
       places: read("places.json"),
       events: read("events.json"),
+      users: existsSync(join(dir, "users.json")) ? read("users.json") : [],
       documents: readdirSync(docs).map((name) =>
         parseSeedDocument(name.replace(/\.md$/, ""), readFileSync(join(docs, name), "utf8")),
       ),

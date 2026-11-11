@@ -37,7 +37,8 @@ test("a member signs in with a texted code, then signs out @smoke", async ({ pag
 
   await expect(page).toHaveURL(/\/home$/);
   await page.getByTestId("user-menu").click();
-  await expect(page.getByTestId("signed-in-as")).toContainText("0101");
+  // The admin test number belongs to Michael in the Bluth seed.
+  await expect(page.getByTestId("signed-in-as")).toHaveText("Michael Bluth");
   await expect(page.getByTestId("role-badge")).toHaveText(/admin/i);
 
   // The session survives a reload.
