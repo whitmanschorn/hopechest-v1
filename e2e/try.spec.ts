@@ -32,6 +32,7 @@ test("with the demo password, look around as any family member without signing i
   // Signing out ends it like any other session.
   await page.getByTestId("user-menu").click();
   await page.getByTestId("sign-out").click();
+  await expect(page).toHaveURL(/\/$/);
   await page.goto("/people");
   await expect(page).toHaveURL(/\/login$/);
 });
