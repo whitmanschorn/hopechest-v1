@@ -10,7 +10,7 @@ export function getSmsSettings(): SmsSettings {
 /** The provider for this number, or null when it cannot be texted here. */
 export function smsProviderFor(phone: string, settings = getSmsSettings()): SmsProvider | null {
   const route = routeFor(settings, phone);
-  if (route === "dev") return devProvider;
+  if (route === "dev") return devProvider(settings.testLoginCode);
   if (route === "twilio" && settings.twilio) return twilioProvider(settings.twilio);
   return null;
 }

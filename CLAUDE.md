@@ -77,6 +77,11 @@ text alone.
   (`c="dimmed"`, `var(--hc-surface)`, `var(--hc-hairline)`), not hex values, so dark mode works.
 - Specs sign in with `signIn(page)` from `e2e/support/auth.ts`.
 
+## Deploying
+
+See `docs/deploying.md`. Merging to `main` migrates and deploys staging, then smoke-tests it.
+Never run `vercel deploy` by hand against a family site.
+
 ## Working in parallel
 
 One work item = one git worktree = one branch = one pull request. Branch from the latest `main`.

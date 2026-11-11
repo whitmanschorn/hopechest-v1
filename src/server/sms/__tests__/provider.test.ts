@@ -22,8 +22,19 @@ describe("routeFor", () => {
     expect(routeFor(settings, FICTIONAL)).toBe("unavailable");
   });
 
-  it("uses the dev provider for test numbers on staging and previews", () => {
-    const settings = readSmsSettings("staging", {
+  it("gives test numbers nothing on staging unless a secret code is set", () => {
+    const open = readSmsSettings("staging", {});
+    expect(isTestPhone(open, FICTIONAL)).toBe(false);
+    expect(routeFor(open, FICTIONAL)).toBe("unavailable");
+
+    const secured = readSmsSettings("staging", { TEST_LOGIN_CODE: "482916" });
+    expect(routeFor(secured, FICTIONAL)).toBe("dev");
+    // A malformed code counts as not set.
+    expect(readSmsSettings("staging", { TEST_LOGIN_CODE: "abc" }).testLoginCode).toBeNull();
+  });
+
+  it("uses the dev provider for test numbers on previews", () => {
+    const settings = readSmsSettings("preview", {
       ...TWILIO,
       TEST_PHONE_ALLOWLIST: "415-555-1234",
     });

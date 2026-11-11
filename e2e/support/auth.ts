@@ -13,7 +13,9 @@ export async function signIn(page: Page, phone: string = PHONES.admin): Promise<
   await page.goto("/login");
   await page.getByTestId("phone-input").fill(phone);
   await page.getByTestId("send-code").click();
-  const code = await page.getByTestId("dev-code").innerText();
+  // Against staging, test numbers use a secret code instead of an on-screen one.
+  await expect(page.getByTestId("code-sent")).toBeVisible();
+  const code = process.env.TEST_LOGIN_CODE ?? (await page.getByTestId("dev-code").innerText());
   await page.getByTestId("code-input").locator("input").first().click();
   await page.keyboard.type(code);
   await page.getByTestId("verify-code").click();

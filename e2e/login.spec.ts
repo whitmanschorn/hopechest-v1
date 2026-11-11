@@ -30,7 +30,8 @@ test("a member signs in with a texted code, then signs out @smoke", async ({ pag
   await expect(page).toHaveURL(/\/login$/);
 
   await requestCode(page, ADMIN);
-  const code = await page.getByTestId("dev-code").innerText();
+  // Staging never shows codes; its test numbers use a secret one.
+  const code = process.env.TEST_LOGIN_CODE ?? (await page.getByTestId("dev-code").innerText());
   expect(code).toMatch(/^\d{6}$/);
   await enterCode(page, code);
 
@@ -51,6 +52,10 @@ test("a member signs in with a texted code, then signs out @smoke", async ({ pag
 });
 
 test("a wrong code is refused", async ({ page }) => {
+  test.skip(
+    Boolean(process.env.TEST_LOGIN_CODE),
+    "needs on-screen codes; would use up staging's guess limit",
+  );
   await requestCode(page, ADMIN);
   const code = await page.getByTestId("dev-code").innerText();
   const wrong = code === "000000" ? "111111" : "000000";
@@ -60,6 +65,7 @@ test("a wrong code is refused", async ({ page }) => {
 });
 
 test("a number that is not in the chest gets no code and cannot sign in", async ({ page }) => {
+  test.skip(Boolean(process.env.TEST_LOGIN_CODE), "would use up staging's guess limit");
   await requestCode(page, STRANGER);
   // Same screen as for a member, so the form does not reveal who belongs.
   await expect(page.getByTestId("dev-code")).toHaveCount(0);

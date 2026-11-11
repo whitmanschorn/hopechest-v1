@@ -1,0 +1,86 @@
+name: Deploy
+
+# Staging deploys on every merge to main. The family sites deploy only when
+# someone runs this workflow by hand and picks one.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which site to deploy
+        required: true
+        type: choice
+        options: [staging, schorn, malone]
+      ref:
+        description: Commit, tag or branch to deploy (default main)
+        required: false
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  # One deploy per site at a time, in order; never cancel one part-way through a migration.
+  group: deploy-${{ inputs.target || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Each site is a GitHub environment holding its own VERCEL_PROJECT_ID,
+    # SITE_URL and VERCEL_TOKEN. Add required reviewers to an environment to gate its deploys.
+    environment:
+      name: ${{ inputs.target || 'staging' }}
+      url: ${{ vars.SITE_URL }}
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Fetch the site's settings from Vercel
+        run: npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      # Migrations run before the new code goes live. They only add (see
+      # prisma/README.md), so the code already running keeps working meanwhile.
+      - name: Apply migrations
+        run: |
+          set -a && . .vercel/.env.production.local && set +a
+          npx prisma migrate deploy
+
+      - name: Build
+        run: npx vercel@latest build --prod --token="$VERCEL_TOKEN"
+      - name: Deploy
+        run: npx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      # Checked at the site's own address: per-deployment addresses sit behind
+      # Vercel's login wall.
+      - name: Check the site is healthy
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "${{ vars.SITE_URL }}/api/health" | grep -q '"ok":true'; then
+              echo "Healthy"; exit 0
+            fi
+            sleep 10
+          done
+          echo "Health check failed"; exit 1
+
+      # Staging only: the smoke specs sign in with a test number, which the
+      # family sites do not allow.
+      - name: Smoke-test staging
+        if: (inputs.target || 'staging') == 'staging'
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ vars.SITE_URL }}
+          TEST_LOGIN_CODE: ${{ secrets.TEST_LOGIN_CODE }}
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:smoke

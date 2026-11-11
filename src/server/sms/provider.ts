@@ -30,6 +30,11 @@ export interface SmsSettings {
   twilio: TwilioConfig | null;
   /** Numbers that get on-screen codes outside production. */
   testPhones: string[];
+  /**
+   * When set, test numbers sign in with this secret code and nothing is shown
+   * on screen. Staging requires it, because its address is public.
+   */
+  testLoginCode: string | null;
 }
 
 export function readSmsSettings(
@@ -47,12 +52,19 @@ export function readSmsSettings(
           fromNumber: source.TWILIO_FROM_NUMBER || undefined,
         }
       : null;
-  return { env, twilio, testPhones: parsePhoneList(source.TEST_PHONE_ALLOWLIST) };
+  const testLoginCode = /^\d{6}$/.test(source.TEST_LOGIN_CODE ?? "")
+    ? source.TEST_LOGIN_CODE!
+    : null;
+  return { env, twilio, testPhones: parsePhoneList(source.TEST_PHONE_ALLOWLIST), testLoginCode };
 }
 
-/** A test number: reserved-for-fiction, or listed in TEST_PHONE_ALLOWLIST. Never in production. */
+/**
+ * A test number: reserved-for-fiction, or listed in TEST_PHONE_ALLOWLIST.
+ * Never in production, and on staging only when a secret code is configured.
+ */
 export function isTestPhone(settings: SmsSettings, phone: string): boolean {
   if (settings.env === "production") return false;
+  if (settings.env === "staging" && !settings.testLoginCode) return false;
   return isFictionalPhone(phone) || settings.testPhones.includes(phone);
 }
 
@@ -61,6 +73,7 @@ export type Route = "twilio" | "dev" | "unavailable";
 /**
  * Which provider handles a number:
  *   - production: always Twilio. Codes are never shown on screen there.
+ *   - staging: test numbers work only with the secret TEST_LOGIN_CODE.
  *   - elsewhere: test numbers get the dev provider; real numbers get Twilio if
  *     it is configured, and otherwise cannot sign in at all.
  */

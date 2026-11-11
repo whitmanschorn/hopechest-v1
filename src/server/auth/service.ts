@@ -3,27 +3,40 @@ import { allows, LIMITS, type Limit } from "@/lib/auth/rateLimit";
 import { hashToken, randomToken } from "@/lib/auth/tokens";
 import { getDb } from "@/lib/db";
 import { getSmsSettings, smsProviderFor } from "@/server/sms";
-import { isTestPhone } from "@/server/sms/provider";
+import { isTestPhone, type SmsSettings } from "@/server/sms/provider";
 
 export const SESSION_DAYS = 30;
 
-/** Uses up one attempt against `key`; false when the limit is already reached. */
-async function takeAttempt(key: string, limit: Limit): Promise<boolean> {
-  const db = getDb();
+async function isAllowed(key: string, limit: Limit): Promise<boolean> {
   const since = new Date(Date.now() - limit.windowMs);
-  const earlier = await db.authAttempt.findMany({
+  const earlier = await getDb().authAttempt.findMany({
     where: { key, createdAt: { gt: since } },
     select: { createdAt: true },
   });
-  if (
-    !allows(
-      limit,
-      earlier.map((row) => row.createdAt),
-    )
-  )
-    return false;
-  await db.authAttempt.create({ data: { key } });
+  return allows(
+    limit,
+    earlier.map((row) => row.createdAt),
+  );
+}
+
+async function record(key: string): Promise<void> {
+  await getDb().authAttempt.create({ data: { key } });
+}
+
+/** Uses up one attempt against `key`; false when the limit is already reached. */
+async function takeAttempt(key: string, limit: Limit): Promise<boolean> {
+  if (!(await isAllowed(key, limit))) return false;
+  await record(key);
   return true;
+}
+
+/**
+ * Test numbers on screen-code environments skip the guess limit so specs can
+ * run repeatedly. With a secret fixed code the limit stays on, or the code
+ * could be guessed.
+ */
+function skipsGuessLimit(settings: SmsSettings, phone: string): boolean {
+  return isTestPhone(settings, phone) && !settings.testLoginCode;
 }
 
 function adminPhones(): string[] {
@@ -57,7 +70,7 @@ export async function requestCode(phone: string, ip: string | null): Promise<Req
   const provider = smsProviderFor(phone, settings);
   if (!provider) return { ok: false, reason: "unavailable" };
 
-  // Test numbers skip limits so specs can run repeatedly; they never exist in production.
+  // Test numbers are never texted, so there is nothing to limit here.
   if (!isTestPhone(settings, phone)) {
     const allowed =
       (await takeAttempt(`code:${phone}`, LIMITS.codePerPhone)) &&
@@ -83,14 +96,17 @@ export async function verifyCode(
   const provider = smsProviderFor(phone, settings);
   if (!provider || !/^\d{4,8}$/.test(code)) return { ok: false, reason: "wrong_code" };
 
-  if (
-    !isTestPhone(settings, phone) &&
-    !(await takeAttempt(`verify:${phone}`, LIMITS.verifyPerPhone))
-  ) {
+  // Only wrong guesses count, so signing in normally never locks anyone out.
+  const guessKey = `verify:${phone}`;
+  const limited = !skipsGuessLimit(settings, phone);
+  if (limited && !(await isAllowed(guessKey, LIMITS.verifyPerPhone))) {
     return { ok: false, reason: "rate_limited" };
   }
-  if (!(await mayRequestCode(phone))) return { ok: false, reason: "wrong_code" };
-  if (!(await provider.checkVerification(phone, code))) return { ok: false, reason: "wrong_code" };
+  const correct = (await mayRequestCode(phone)) && (await provider.checkVerification(phone, code));
+  if (!correct) {
+    if (limited) await record(guessKey);
+    return { ok: false, reason: "wrong_code" };
+  }
 
   const user = await findOrCreateUser(phone);
   if (!user) return { ok: false, reason: "wrong_code" };
@@ -120,7 +136,8 @@ async function findOrCreateUser(phone: string) {
   if (!invite && !isAdmin) return null;
 
   try {
-    return db.$transaction(async (tx) => {
+    // `await` matters: without it a failure skips the catch below.
+    return await db.$transaction(async (tx) => {
       // Someone may already hold the invited person's account under an older number.
       const personTaken = invite
         ? await tx.user.findUnique({ where: { personId: invite.personId }, select: { id: true } })
