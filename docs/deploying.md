@@ -10,8 +10,8 @@ environment:
 | malone  | not created yet                      | By hand: Actions → Deploy → Run workflow | Real  |
 
 `.github/workflows/deploy.yml` does the same thing for each: fetch the site's settings from
-Vercel, apply migrations, build, deploy, then check `/api/health`. Staging also runs the `@smoke`
-specs against the live site. Vercel is not connected to GitHub; nothing deploys except through
+Vercel, apply migrations, build, deploy, then check `/api/health`. Staging also refreshes the
+Bluth seed and runs the `@smoke` specs against the live site. Vercel is not connected to GitHub; nothing deploys except through
 this workflow.
 
 ## What each site needs
@@ -40,3 +40,19 @@ against staging:
 ```sh
 PLAYWRIGHT_BASE_URL=https://hopechest-staging.vercel.app TEST_LOGIN_CODE=<code> npm run test:smoke
 ```
+
+## Keeping local data in step with staging
+
+Local work, CI and staging all hold the same Bluth seed, loaded by `npm run db:seed` from
+`seed/bluth/`. Two commands bring a local database back in line:
+
+- `npm run db:reset` erases it, re-applies every migration and loads the seed. Use this by
+  default.
+- `npm run db:pull` replaces it with a copy of staging's database, for when staging holds
+  something the seed does not (photos tagged by hand, a bug that only shows there). It needs
+  staging's direct database URL as `STAGING_DATABASE_URL` in `.env.staging.local` (git-ignored);
+  copy the value of `DATABASE_URL_UNPOOLED` from the staging project in Vercel. Sessions, codes
+  and API keys are not copied.
+
+Both refuse to touch anything but a database on your own machine. Nothing copies data up to
+staging: change the seed and merge instead.

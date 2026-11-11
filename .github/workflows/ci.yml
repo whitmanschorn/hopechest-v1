@@ -44,7 +44,7 @@ jobs:
       # Used when no Neon branch is available: pushes to main, pull requests
       # from forks, and before the staging Neon project is connected.
       postgres:
-        image: pgvector/pgvector:pg17
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_PASSWORD: hopechest
           POSTGRES_DB: hopechest
@@ -103,6 +103,8 @@ jobs:
         run: |
           npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
           node scripts/check-migrations.ts "${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}"
+      - name: Load the Bluth seed
+        run: npm run db:seed
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium

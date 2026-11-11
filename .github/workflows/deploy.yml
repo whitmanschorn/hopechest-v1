@@ -57,6 +57,14 @@ jobs:
           set -a && . .vercel/.env.production.local && set +a
           npx prisma migrate deploy
 
+      # Staging only: refresh the fictional Bluth family. The script updates
+      # its own rows in place and refuses to run against a family site.
+      - name: Load the Bluth seed
+        if: (inputs.target || 'staging') == 'staging'
+        run: |
+          set -a && . .vercel/.env.production.local && set +a
+          npm run db:seed
+
       - name: Build
         run: npx vercel@latest build --prod --token="$VERCEL_TOKEN"
       - name: Deploy
