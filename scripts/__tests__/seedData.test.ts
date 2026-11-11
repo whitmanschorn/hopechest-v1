@@ -174,6 +174,7 @@ describe("parseSeedDocument", () => {
     expect(doc).toEqual({
       slug: "oscar",
       title: "Oscar Bluth",
+      kind: "article",
       sourceUrl: "https://example.org/Oscar",
       license: "CC-BY-SA 3.0",
       text: "Twin.",
@@ -223,6 +224,13 @@ describe.each(readdirSync("seed").filter((name) => existsSync(join("seed", name,
 
     it("has no problems", () => {
       expect(validateSeed(data)).toEqual([]);
+    });
+
+    it("has the picture for every document that names one", () => {
+      for (const doc of data.documents) {
+        if (doc.scan)
+          expect([doc.scan, existsSync(join(dir, "files", doc.scan))]).toEqual([doc.scan, true]);
+      }
     });
 
     it("has questions that point at people in the seed", () => {

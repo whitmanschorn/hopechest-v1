@@ -69,12 +69,26 @@ No article supports these, so they are gone or reduced to what is supported:
 - Typed relationships. The old notes ("adoptive", "legal/presumed") are now qualifiers, so Buster
   has a legal father (George Sr.) and a biological one (Oscar).
 - Partner links for Oscar and Lucille, G.O.B. and Eve Holt, and Buster and Lucille Austero.
-- The George Sr. and Lucille marriage, as a deduced event (around 1965) with its clue.
+- The George Sr. and Lucille marriage: February 13, 1965, taken from a marriage licence written
+  for this project (see "Invented for testing" below). It was first added as a deduction, "around
+  1965".
 - Events for births that had none, Annyong's adoption, the Fünkes' move to California in 2003,
   Tobias and Lindsay's open marriage, Oscar's service in Vietnam and his time jailed as George,
   the founding of Cinco de Cuatro (1982), G.O.B.'s expulsion from the Alliance of Magicians,
   George Sr. moving out (spring 2006) and Lindsay learning of her adoption.
 - Every event lists everyone who took part, not one person.
+
+## Invented for testing
+
+One document, with its scanned-looking picture in `files/`, is not from the wiki. `documents/marriage-license-george-lucille.md` is a fictional
+Orange County marriage licence and certificate, written so that "when did grandma and grandpa get
+married?" has a family paper as its source of truth, the way a real chest would. It fixes the
+wedding at Newport Beach on February 13, 1965, with Oscar as a witness. Nothing in the series or
+the wiki gives that date. It agrees with what the wiki does say: Lucille was a waitress, was
+expecting G.O.B., and had been with Oscar first.
+
+The marriage event cites the licence, so its date is exact and no longer a deduction. G.O.B.'s
+birth stays a deduction ("around 1965").
 
 ## Removed
 
@@ -87,7 +101,7 @@ No article supports these, so they are gone or reduced to what is supported:
 
 ## Questions
 
-The 25 old questions became 34. Changes:
+The 25 old questions became 35. Changes:
 
 - Fixed answers that the articles contradict: the year Lucille Austero vanished, Tracey's death,
   Lindsay's parentage, the wedding, the Queen Mary, Buster's enlistment.
@@ -95,7 +109,7 @@ The 25 old questions became 34. Changes:
   "Trap check:" labels from the question text. Traps are now marked with `"kind": "trap"`.
 - Dropped two whose answers were quotations not found in any article (old q006, q019), and the
   catchphrase question (old q025).
-- Added questions about the family graph, including the deduced marriage date, questions that
+- Added questions about the family graph, including the marriage date and its licence, questions that
   depend on who is asking, and questions whose right answer is "not recorded".
 
 ## Known gaps

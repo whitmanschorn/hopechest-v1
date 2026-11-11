@@ -70,13 +70,24 @@ export interface SeedEvent {
   place?: string;
   date?: SeedDate;
   participants: { person: string; role?: (typeof EVENT_ROLES)[number] }[];
+  /** Slugs of the documents this event is recorded in. */
+  sources?: string[];
 }
+
+export const DOCUMENT_KINDS = ["article", "record", "letter", "recipe", "story", "other"] as const;
 
 export interface SeedDocument {
   /** File name without extension; the stable key. */
   slug: string;
   title: string;
-  sourceUrl: string;
+  /** "article" (a wiki page, the default) or a family paper such as "record". */
+  kind: (typeof DOCUMENT_KINDS)[number];
+  /** Where an article was copied from. Family papers have none. */
+  sourceUrl?: string;
+  /** The date of the paper itself, e.g. "1965-02-13". */
+  date?: string;
+  /** File name under files/ of a picture of the original paper. */
+  scan?: string;
   license: string;
   retrieved?: string;
   text: string;
@@ -250,10 +261,30 @@ export function validateSeed(data: SeedData): string[] {
     const name = `document "${doc.slug}"`;
     if (!doc.title?.trim()) problems.push(`${name}: no title`);
     if (!doc.text.trim()) problems.push(`${name}: no text`);
-    if (!/^https:\/\//.test(doc.sourceUrl ?? "")) problems.push(`${name}: no source_url`);
+    if (!DOCUMENT_KINDS.includes(doc.kind)) problems.push(`${name}: unknown kind "${doc.kind}"`);
+    if (doc.kind === "article" && !/^https:\/\//.test(doc.sourceUrl ?? "")) {
+      problems.push(`${name}: no source_url`);
+    }
+    if (doc.scan !== undefined && !/^[a-z0-9-]+\.(jpg|png)$/.test(doc.scan)) {
+      problems.push(`${name}: scan must be a .jpg or .png file name`);
+    }
+    if (doc.date !== undefined && resolveDate(doc.date)?.year === undefined) {
+      problems.push(`${name}: date has no year`);
+    }
     if (!doc.license?.trim()) problems.push(`${name}: no license`);
   }
-  for (const url of duplicates(data.documents.map((d) => d.sourceUrl))) {
+  const documents = new Set(data.documents.map((doc) => doc.slug));
+  for (const event of data.events) {
+    for (const slug of event.sources ?? []) {
+      if (!documents.has(slug)) problems.push(`event "${event.slug}": no document "${slug}"`);
+    }
+    // A date read off a record is not a deduction.
+    if (event.sources?.length && typeof event.date === "object" && event.date.deduced) {
+      problems.push(`event "${event.slug}": a date with a source cannot also be deduced`);
+    }
+  }
+  const urls = data.documents.flatMap((d) => (d.sourceUrl ? [d.sourceUrl] : []));
+  for (const url of duplicates(urls)) {
     problems.push(`two documents share the source ${url}`);
   }
 
@@ -294,7 +325,13 @@ export function parseSeedDocument(slug: string, file: string): SeedDocument {
   return {
     slug,
     title: header.title ?? "",
-    sourceUrl: header.source_url ?? "",
+    // The wiki pages say "character" or "concept" here; both are articles.
+    kind: (DOCUMENT_KINDS as readonly string[]).includes(header.kind ?? "")
+      ? (header.kind as SeedDocument["kind"])
+      : "article",
+    ...(header.source_url ? { sourceUrl: header.source_url } : {}),
+    ...(header.date ? { date: header.date } : {}),
+    ...(header.scan ? { scan: header.scan } : {}),
     license: header.license ?? "",
     ...(header.retrieved ? { retrieved: header.retrieved } : {}),
     text: (match ? match[2] : file).trim(),

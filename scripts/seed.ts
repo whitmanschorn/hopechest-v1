@@ -4,8 +4,8 @@
 // Safe to re-run: every row is matched on a stable key and updated in place,
 // and nothing outside the seed is touched. Refuses to run in production.
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
@@ -66,6 +66,26 @@ if (problems.length > 0) fail(`${dir} has problems:\n  - ${problems.join("\n  - 
 
 const connectionString = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 if (!connectionString) fail("DATABASE_URL is not set");
+/**
+ * Puts a file where the app reads files from: the private Vercel Blob store
+ * when its token is set, otherwise the local folder (see src/server/storage).
+ */
+async function storeFile(key: string, body: Buffer, contentType: string): Promise<void> {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const { put } = await import("@vercel/blob");
+    await put(key, body, {
+      access: "private",
+      contentType,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return;
+  }
+  const path = join(process.env.FILES_DIR ?? ".data/files", key);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, body);
+}
+
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 try {
@@ -136,6 +156,7 @@ try {
     placeIds.set(place.slug, row.id);
   }
 
+  const eventIds = new Map<string, string>();
   for (const event of data.events) {
     const fields = {
       kind: upper(event.kind),
@@ -151,6 +172,7 @@ try {
         update: fields,
         select: { id: true },
       });
+      eventIds.set(event.slug, row.id);
       await tx.eventParticipant.deleteMany({ where: { eventId: row.id } });
       await tx.eventParticipant.createMany({
         data: event.participants.map((participant) => ({
@@ -162,44 +184,95 @@ try {
     });
   }
 
+  const sourceIds = new Map<string, string>();
   for (const doc of data.documents) {
-    const sha256 = createHash("sha256").update(doc.text).digest("hex");
-    const citation = `${doc.title} (Arrested Development Wiki, ${doc.license})`;
-    // A document is matched on where it came from, so an edited seed file
-    // replaces its earlier text instead of adding a second copy.
+    const scanPath = doc.scan ? join(dir, "files", doc.scan) : null;
+    if (scanPath && !existsSync(scanPath)) fail(`document "${doc.slug}": no file ${scanPath}`);
+    const scan = scanPath ? readFileSync(scanPath) : null;
+    const hash = createHash("sha256").update(doc.text);
+    if (scan) hash.update(scan);
+    const sha256 = hash.digest("hex");
+    const article = doc.kind === "article";
+    // A wiki page is matched on where it came from, a family paper on its
+    // title, so an edited seed file replaces its earlier text instead of
+    // adding a second copy.
     const existing = await db.document.findFirst({
-      where: { originalUrl: doc.sourceUrl },
+      where: article ? { originalUrl: doc.sourceUrl } : { kind: upper(doc.kind), title: doc.title },
       select: { id: true, sha256: true },
     });
-    if (existing?.sha256 === sha256) continue;
-    const chunks = chunkMarkdown(doc.text);
+    const sourceKind = article ? ("EXTERNAL" as const) : ("DOCUMENT" as const);
+    const sourceFields = {
+      citation: article ? `${doc.title} (Arrested Development Wiki, ${doc.license})` : doc.title,
+      url: doc.sourceUrl ?? null,
+    };
+
     await db.$transaction(async (tx) => {
-      const fields = {
-        sha256,
-        kind: "ARTICLE" as const,
-        title: doc.title,
-        originalUrl: doc.sourceUrl,
-        mimeType: "text/markdown",
-        bytes: Buffer.byteLength(doc.text),
-        text: doc.text,
-      };
-      const row = existing
-        ? await tx.document.update({ where: { id: existing.id }, data: fields })
-        : await tx.document.create({ data: fields });
-      await tx.documentChunk.deleteMany({ where: { documentId: row.id } });
-      await tx.documentChunk.createMany({
-        data: chunks.map((chunk, position) => ({ documentId: row.id, position, ...chunk })),
-      });
+      let id = existing?.id;
+      if (existing?.sha256 !== sha256) {
+        const fields = {
+          sha256,
+          kind: upper(doc.kind),
+          title: doc.title,
+          originalUrl: doc.sourceUrl ?? null,
+          mimeType: "text/markdown",
+          bytes: Buffer.byteLength(doc.text),
+          text: doc.text,
+          ...toColumns(resolveDate(doc.date)),
+        };
+        const row = existing
+          ? await tx.document.update({ where: { id: existing.id }, data: fields })
+          : await tx.document.create({ data: fields });
+        id = row.id;
+        if (scan) {
+          // The picture of the original paper, served like any other private file.
+          const type = doc.scan!.endsWith(".png") ? "image/png" : "image/jpeg";
+          const key = `documents/${row.id}/original.${doc.scan!.endsWith(".png") ? "png" : "jpg"}`;
+          await storeFile(key, scan, type);
+          await tx.document.update({
+            where: { id: row.id },
+            data: { originalUrl: `/api/files/${key}`, mimeType: type, bytes: scan.byteLength },
+          });
+        }
+        await tx.documentChunk.deleteMany({ where: { documentId: row.id } });
+        await tx.documentChunk.createMany({
+          data: chunkMarkdown(doc.text).map((chunk, position) => ({
+            documentId: row.id,
+            position,
+            ...chunk,
+          })),
+        });
+      }
       const source = await tx.source.findFirst({
-        where: { documentId: row.id, kind: "EXTERNAL" },
+        where: { documentId: id, kind: sourceKind },
         select: { id: true },
       });
-      const sourceFields = { citation, url: doc.sourceUrl };
-      if (source) await tx.source.update({ where: { id: source.id }, data: sourceFields });
-      else {
-        await tx.source.create({ data: { kind: "EXTERNAL", documentId: row.id, ...sourceFields } });
-      }
+      const saved = source
+        ? await tx.source.update({ where: { id: source.id }, data: sourceFields })
+        : await tx.source.create({ data: { kind: sourceKind, documentId: id, ...sourceFields } });
+      sourceIds.set(doc.slug, saved.id);
     });
+  }
+
+  // An event recorded in a document is tied to it by an accepted claim, the
+  // same trail a reviewer leaves when accepting something an agent proposed.
+  for (const event of data.events) {
+    for (const slug of event.sources ?? []) {
+      const link = {
+        sourceId: sourceIds.get(slug)!,
+        appliedType: "event",
+        appliedId: eventIds.get(event.slug)!,
+      };
+      const fields = {
+        status: "ACCEPTED" as const,
+        statement: event.title,
+        action: "event.create",
+        payload: { slug: event.slug },
+        createdByAgent: "seed",
+      };
+      const claim = await db.claim.findFirst({ where: link, select: { id: true } });
+      if (claim) await db.claim.update({ where: { id: claim.id }, data: fields });
+      else await db.claim.create({ data: { ...link, ...fields } });
+    }
   }
 
   // Test accounts, so specs can sign in as a known family member.

@@ -10,7 +10,7 @@ import { KIND_LABELS, ROLE_LABELS } from "@/lib/events/eventEdit";
 import { describe } from "@/lib/fuzzyDate";
 import { can } from "@/server/actor";
 import { requireActor } from "@/server/auth/session";
-import { getEvent } from "@/server/events/service";
+import { getEvent, getEventSources } from "@/server/events/service";
 
 export const metadata: Metadata = { title: "Event · Hopechest" };
 
@@ -19,6 +19,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const event = await getEvent(actor, id);
   if (!event) notFound();
+  const sources = await getEventSources(actor, event.id);
   const canWrite = can(actor, "write");
 
   return (
@@ -109,6 +110,26 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                 </Text>
               )}
             </Group>
+          ))}
+        </Stack>
+
+        <Stack gap="sm" component="section" data-testid="event-sources">
+          <Title order={2} fz="h3">
+            Sources
+          </Title>
+          {sources.length === 0 && (
+            <Text c="dimmed" data-testid="event-no-sources">
+              No document is attached to this event yet.
+            </Text>
+          )}
+          {sources.map((source) => (
+            <Text key={source.id} data-testid="event-source">
+              {source.documentId ? (
+                <TextLink href={`/documents/${source.documentId}`}>{source.citation}</TextLink>
+              ) : (
+                source.citation
+              )}
+            </Text>
           ))}
         </Stack>
       </Stack>
