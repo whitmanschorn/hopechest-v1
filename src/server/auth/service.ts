@@ -1,7 +1,7 @@
 import { parsePhoneList } from "@/lib/auth/phone";
 import { allows, LIMITS, type Limit } from "@/lib/auth/rateLimit";
-import { hashToken, randomToken } from "@/lib/auth/tokens";
-import { canViewAs, effectiveIdentity } from "@/lib/auth/viewAs";
+import { hashesMatch, hashToken, randomToken } from "@/lib/auth/tokens";
+import { DEMO_ROLES, demoDoorOpen, effectiveIdentity } from "@/lib/auth/viewAs";
 import { getChestConfig } from "@/lib/chest";
 import { getDb } from "@/lib/db";
 import { getSmsSettings, smsProviderFor } from "@/server/sms";
@@ -173,9 +173,8 @@ export async function endSession(sessionToken: string): Promise<void> {
 
 /**
  * The signed-in user for a session cookie value, or null. `role` and
- * `personId` are the ones in effect: an admin using "view as" outside
- * production gets the chosen person's. `id` and `phone` are always the real
- * account's, so every change is still recorded against whoever made it.
+ * `personId` are the ones in effect: a demo session (see below) counts as the
+ * family member it stands in for. `id` is always the real account's.
  */
 export async function userForSession(sessionToken: string) {
   const session = await getDb().session.findUnique({
@@ -183,55 +182,90 @@ export async function userForSession(sessionToken: string) {
     include: { user: true },
   });
   if (!session || session.expiresAt <= new Date() || session.user.disabledAt) return null;
-  const env = getChestConfig().env;
-  const effective = effectiveIdentity(session.user, session, env);
+  const effective = effectiveIdentity(session.user, session, getChestConfig().env);
   return {
     ...session.user,
     role: effective.role,
     personId: effective.personId,
     viewingAs: effective.viewingAs,
-    /** Whether the real account may use "view as" here. */
-    canViewAs: canViewAs(session.user, env),
   };
 }
 
+// ───────────────────────────── the demo door ─────────────────────────────
+
+/** The one account every demo session belongs to. Its "phone" is not a number, so it cannot sign in. */
+const DEMO_ACCOUNT = "demo-visitor";
+const DEMO_HOURS = 12;
+
+function demoPassword(): string | null {
+  const password = process.env.DEMO_PASSWORD;
+  return demoDoorOpen(getChestConfig().env, password) ? password!.trim() : null;
+}
+
+/** Whether this deployment lets people in with the demo password. */
+export function hasDemoDoor(): boolean {
+  return demoPassword() !== null;
+}
+
+export type DemoPasswordResult = "ok" | "wrong" | "rate_limited" | "closed";
+
+/** Checks the demo password. Wrong guesses are counted per network address. */
+export async function checkDemoPassword(
+  password: string,
+  ip: string | null,
+): Promise<DemoPasswordResult> {
+  const expected = demoPassword();
+  if (!expected) return "closed";
+  const key = `demo:${ip ?? "unknown"}`;
+  if (!(await isAllowed(key, LIMITS.demoPerIp))) return "rate_limited";
+  if (!hashesMatch(hashToken(password.trim()), hashToken(expected))) {
+    await record(key);
+    return "wrong";
+  }
+  return "ok";
+}
+
+/** Everyone a demo visitor can choose to be. Only for someone who has given the password. */
+export async function demoPeople(): Promise<{ value: string; label: string }[]> {
+  if (!hasDemoDoor()) return [];
+  const people = await getDb().person.findMany({
+    select: { slug: true, displayName: true },
+    orderBy: { displayName: "asc" },
+  });
+  return people.map((person) => ({ value: person.slug, label: person.displayName }));
+}
+
 /**
- * Starts or (with null) stops viewing the chest as someone else, for this
- * session only. Refused in production and for anyone but an admin.
+ * Starts a session that counts as `personSlug`. The caller must have checked
+ * the password. Demo sessions are short, and never admin.
  */
-export async function setViewAs(
-  sessionToken: string,
-  choice: { personSlug: string; role: string } | null,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function startDemoSession(
+  personSlug: string,
+  role: string,
+  userAgent: string | null,
+): Promise<{ ok: true; sessionToken: string; expiresAt: Date } | { ok: false }> {
+  if (!hasDemoDoor()) return { ok: false };
   const db = getDb();
-  const session = await db.session.findUnique({
-    where: { tokenHash: hashToken(sessionToken) },
-    include: { user: true },
+  const person = await db.person.findUnique({ where: { slug: personSlug }, select: { id: true } });
+  const actingRole = DEMO_ROLES.find((name) => name === role);
+  if (!person || !actingRole) return { ok: false };
+
+  const account = await db.user.upsert({
+    where: { phone: DEMO_ACCOUNT },
+    create: { phone: DEMO_ACCOUNT, role: "VIEWER", onboardedAt: new Date() },
+    update: { lastSeenAt: new Date() },
   });
-  if (!session || session.expiresAt <= new Date() || session.user.disabledAt) {
-    return { ok: false, message: "Sign in again." };
-  }
-  // Checked against the real account, so someone viewing as a read-only member can still stop.
-  if (!canViewAs(session.user, getChestConfig().env)) {
-    return { ok: false, message: "This is not available here." };
-  }
-  if (!choice) {
-    await db.session.update({
-      where: { id: session.id },
-      data: { actingPersonId: null, actingRole: null },
-    });
-    return { ok: true };
-  }
-  const person = await db.person.findUnique({
-    where: { slug: choice.personSlug },
-    select: { id: true },
+  const sessionToken = randomToken();
+  const expiresAt = new Date(Date.now() + DEMO_HOURS * 60 * 60 * 1000);
+  await db.session.create({
+    data: {
+      tokenHash: hashToken(sessionToken),
+      userId: account.id,
+      userAgent,
+      expiresAt,
+      actingPersonId: person.id,
+      actingRole,
+    },
   });
-  if (!person) return { ok: false, message: "Choose someone from the list." };
-  const role = (["ADMIN", "CONTRIBUTOR", "VIEWER"] as const).find((name) => name === choice.role);
-  if (!role) return { ok: false, message: "Choose an access level." };
-  await db.session.update({
-    where: { id: session.id },
-    data: { actingPersonId: person.id, actingRole: role },
-  });
-  return { ok: true };
+  return { ok: true, sessionToken, expiresAt };
 }

@@ -1,10 +1,23 @@
 /**
- * "View as": an admin outside production can look at the chest as another
- * family member, to see what that person sees. Pure decision logic, so the
- * rule that matters (never in production, admins only) is unit-tested.
+ * The demo door: on a test site, someone with the demo password can sign in
+ * as any family member and look around as them. Pure decision logic, so the
+ * rules that matter (never in production, never without a real password) are
+ * unit-tested.
  */
 
 export type RoleName = "ADMIN" | "CONTRIBUTOR" | "VIEWER";
+
+/** Access levels a demo visitor may choose. Never full admin. */
+export const DEMO_ROLES = ["VIEWER", "CONTRIBUTOR"] as const;
+export type DemoRole = (typeof DEMO_ROLES)[number];
+
+/** Shorter passwords are refused outright, so a blank or lazy setting opens nothing. */
+export const MIN_DEMO_PASSWORD = 12;
+
+/** Whether this deployment has a demo door at all. */
+export function demoDoorOpen(env: string, password: string | undefined): boolean {
+  return env !== "production" && (password?.trim().length ?? 0) >= MIN_DEMO_PASSWORD;
+}
 
 export interface RealIdentity {
   role: RoleName;
@@ -16,39 +29,26 @@ export interface SessionViewAs {
   actingRole: RoleName | null;
 }
 
-/** Whether this account may use "view as" at all on this deployment. */
-export function canViewAs(real: Pick<RealIdentity, "role">, env: string): boolean {
-  return env !== "production" && real.role === "ADMIN";
-}
-
 export interface EffectiveIdentity {
   role: RoleName;
   personId: string | null;
-  /** True while looking at the chest as someone else. */
+  /** True for a demo session standing in for a family member. */
   viewingAs: boolean;
 }
 
 /**
- * Who the session counts as for kinship labels and permissions. A stored
- * choice is ignored, not trusted, whenever the account may not use "view as".
+ * Who a session counts as for kinship labels and permissions. Only the demo
+ * door writes the "acting" fields. In production they are ignored whatever
+ * they hold, and they can never grant full admin.
  */
 export function effectiveIdentity(
   real: RealIdentity,
   session: SessionViewAs,
   env: string,
 ): EffectiveIdentity {
-  if (!session.actingPersonId || !canViewAs(real, env)) {
+  if (!session.actingPersonId || env === "production") {
     return { role: real.role, personId: real.personId, viewingAs: false };
   }
-  return {
-    role: session.actingRole ?? real.role,
-    personId: session.actingPersonId,
-    viewingAs: true,
-  };
+  const role = session.actingRole === "CONTRIBUTOR" ? "CONTRIBUTOR" : "VIEWER";
+  return { role, personId: session.actingPersonId, viewingAs: true };
 }
-
-export const ROLE_WORDS: Record<RoleName, string> = {
-  ADMIN: "full access",
-  CONTRIBUTOR: "can add and edit",
-  VIEWER: "view only",
-};

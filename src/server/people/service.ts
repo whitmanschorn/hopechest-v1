@@ -628,7 +628,10 @@ export async function getPersonHistory(
       before: row.before,
       after: row.after,
       by: row.actorUser
-        ? (row.actorUser.person?.displayName ?? maskPhone(row.actorUser.phone))
+        ? (row.actorUser.person?.displayName ??
+          (row.actorUser.phone === "demo-visitor"
+            ? "A demo visitor"
+            : maskPhone(row.actorUser.phone)))
         : row.actorApiKey
           ? `${row.actorApiKey.name} (API key)`
           : "Someone no longer here",

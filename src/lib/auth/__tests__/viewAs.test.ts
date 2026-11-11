@@ -1,63 +1,52 @@
-import { canViewAs, effectiveIdentity } from "../viewAs";
+import { demoDoorOpen, effectiveIdentity } from "../viewAs";
 
-const admin = { role: "ADMIN" as const, personId: "michael" };
-const asMaeby = { actingPersonId: "maeby", actingRole: "VIEWER" as const };
+const demo = { role: "VIEWER" as const, personId: null };
+
+describe("demoDoorOpen", () => {
+  it("needs a real password and a site that is not a family's", () => {
+    expect(demoDoorOpen("staging", "a-long-enough-password")).toBe(true);
+    expect(demoDoorOpen("development", "a-long-enough-password")).toBe(true);
+    expect(demoDoorOpen("production", "a-long-enough-password")).toBe(false);
+    expect(demoDoorOpen("staging", undefined)).toBe(false);
+    expect(demoDoorOpen("staging", "")).toBe(false);
+    expect(demoDoorOpen("staging", "short")).toBe(false);
+    expect(demoDoorOpen("staging", "            ")).toBe(false);
+  });
+});
 
 describe("effectiveIdentity", () => {
-  it("is the real person when no one is being viewed as", () => {
-    expect(effectiveIdentity(admin, { actingPersonId: null, actingRole: null }, "staging")).toEqual(
-      {
-        role: "ADMIN",
-        personId: "michael",
-        viewingAs: false,
-      },
-    );
-  });
-
-  it("takes the chosen person and access level on staging", () => {
-    expect(effectiveIdentity(admin, asMaeby, "staging")).toEqual({
-      role: "VIEWER",
-      personId: "maeby",
-      viewingAs: true,
-    });
-  });
-
-  it("keeps the admin's own access when no level was chosen", () => {
+  it("is the account itself for an ordinary session", () => {
+    const michael = { role: "ADMIN" as const, personId: "michael" };
     expect(
-      effectiveIdentity(admin, { actingPersonId: "maeby", actingRole: null }, "development"),
+      effectiveIdentity(michael, { actingPersonId: null, actingRole: null }, "staging"),
     ).toEqual({
-      role: "ADMIN",
-      personId: "maeby",
-      viewingAs: true,
-    });
-  });
-
-  it("ignores a stored choice in production", () => {
-    expect(effectiveIdentity(admin, asMaeby, "production")).toEqual({
       role: "ADMIN",
       personId: "michael",
       viewingAs: false,
     });
   });
 
-  it("ignores a stored choice for anyone who is not an admin", () => {
-    // Even one that asks for more access than they have.
-    const contributor = { role: "CONTRIBUTOR" as const, personId: "george-michael" };
+  it("is the chosen person, with the chosen access, for a demo session", () => {
     expect(
-      effectiveIdentity(contributor, { actingPersonId: "michael", actingRole: "ADMIN" }, "staging"),
-    ).toEqual({
-      role: "CONTRIBUTOR",
-      personId: "george-michael",
-      viewingAs: false,
-    });
+      effectiveIdentity(demo, { actingPersonId: "maeby", actingRole: "CONTRIBUTOR" }, "staging"),
+    ).toEqual({ role: "CONTRIBUTOR", personId: "maeby", viewingAs: true });
+    expect(
+      effectiveIdentity(demo, { actingPersonId: "maeby", actingRole: "VIEWER" }, "staging").role,
+    ).toBe("VIEWER");
   });
-});
 
-describe("canViewAs", () => {
-  it("is for admins, outside production", () => {
-    expect(canViewAs({ role: "ADMIN" }, "staging")).toBe(true);
-    expect(canViewAs({ role: "ADMIN" }, "development")).toBe(true);
-    expect(canViewAs({ role: "ADMIN" }, "production")).toBe(false);
-    expect(canViewAs({ role: "VIEWER" }, "staging")).toBe(false);
+  it("never grants admin, whatever the session row says", () => {
+    expect(
+      effectiveIdentity(demo, { actingPersonId: "maeby", actingRole: "ADMIN" }, "staging").role,
+    ).toBe("VIEWER");
+    expect(
+      effectiveIdentity(demo, { actingPersonId: "maeby", actingRole: null }, "staging").role,
+    ).toBe("VIEWER");
+  });
+
+  it("ignores the acting fields in production", () => {
+    expect(
+      effectiveIdentity(demo, { actingPersonId: "maeby", actingRole: "CONTRIBUTOR" }, "production"),
+    ).toEqual({ role: "VIEWER", personId: null, viewingAs: false });
   });
 });

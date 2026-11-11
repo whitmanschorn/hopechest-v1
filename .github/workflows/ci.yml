@@ -36,6 +36,8 @@ jobs:
     timeout-minutes: 20
     env:
       HOPECHEST_ENV: preview
+      # Not a secret: this database is thrown away after the run.
+      DEMO_PASSWORD: local-demo-password
       # A reserved-for-fiction number; specs sign in as this admin.
       ADMIN_PHONES: "+12025550101,+12025550102"
       # Has no account until the first-sign-in spec creates it.

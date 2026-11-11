@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const SESSION_COOKIE = "hopechest_session";
 
 /** Pages anyone may open. Everything else needs a session. */
-const PUBLIC = [/^\/$/, /^\/login$/, /^\/join(\/|$)/];
+const PUBLIC = [/^\/$/, /^\/login$/, /^\/join(\/|$)/, /^\/try$/];
 
 /**
  * A fast first gate: no session cookie, no entry. It only checks that the
