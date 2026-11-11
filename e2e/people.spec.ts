@@ -72,12 +72,12 @@ test("a person's page shows their life, family and events @smoke", async ({ page
 test("a deduced date is shown as a deduction, with its clue", async ({ page }) => {
   await signIn(page);
   await page.goto("/people/lucille");
-  const wedding = page
+  const adoption = page
     .getByTestId("person-event")
-    .filter({ hasText: "George Sr. and Lucille marry" });
-  await expect(wedding).toContainText("around 1965");
-  await expect(wedding).toContainText("Date deduced: No record gives the wedding date.");
-  await expect(wedding.getByRole("link", { name: "George Bluth Sr." })).toHaveAttribute(
+    .filter({ hasText: "George Sr. and Lucille adopt Lindsay" });
+  await expect(adoption).toContainText("around 1967");
+  await expect(adoption).toContainText("Date deduced: She was adopted at the age of three");
+  await expect(adoption.getByRole("link", { name: "George Bluth Sr." })).toHaveAttribute(
     "href",
     "/people/george-sr",
   );

@@ -30,19 +30,19 @@ test("the timeline shows the family's events in order, by decade @smoke", async 
   await expect(shown(page, "timeline-title")).toBeVisible();
 
   // A deduced date is hedged, and says what it rests on.
-  const wedding = shown(page, "decade-1960s")
+  const adoption = shown(page, "decade-1960s")
     .getByTestId("event-card")
-    .filter({ hasText: "George Sr. and Lucille marry" });
-  await expect(wedding.getByTestId("event-date")).toHaveText("around 1965");
-  await expect(wedding.getByTestId("event-kind")).toHaveText("Marriage");
-  await expect(wedding.getByTestId("event-clue")).toContainText(
-    "Date deduced: No record gives the wedding date.",
+    .filter({ hasText: "George Sr. and Lucille adopt Lindsay" });
+  await expect(adoption.getByTestId("event-date")).toHaveText("around 1967");
+  await expect(adoption.getByTestId("event-kind")).toHaveText("Other");
+  await expect(adoption.getByTestId("event-clue")).toContainText(
+    "Date deduced: She was adopted at the age of three",
   );
-  await expect(wedding.getByRole("link", { name: "George Bluth Sr." })).toHaveAttribute(
+  await expect(adoption.getByRole("link", { name: "George Bluth Sr." })).toHaveAttribute(
     "href",
     "/people/george-sr",
   );
-  await expect(wedding.getByRole("link", { name: "Lucille Bluth" })).toHaveAttribute(
+  await expect(adoption.getByRole("link", { name: "Lucille Bluth" })).toHaveAttribute(
     "href",
     "/people/lucille",
   );
@@ -127,11 +127,11 @@ test("an event has its own page, reached from the timeline and from a person", a
 
   await page.goto("/people/lucille");
   await shown(page, "person-event-link")
-    .filter({ hasText: "George Sr. and Lucille marry" })
+    .filter({ hasText: "George Sr. and Lucille adopt Lindsay" })
     .click();
-  await expect(shown(page, "event-title")).toHaveText("George Sr. and Lucille marry");
-  await expect(shown(page, "event-date")).toHaveText("around 1965");
-  await expect(shown(page, "event-clue")).toContainText("Date deduced: No record gives");
+  await expect(shown(page, "event-title")).toHaveText("George Sr. and Lucille adopt Lindsay");
+  await expect(shown(page, "event-date")).toHaveText("around 1967");
+  await expect(shown(page, "event-clue")).toContainText("Date deduced: She was adopted");
 });
 
 test("add an event from a person's page, edit it, then delete it", async ({ page }) => {

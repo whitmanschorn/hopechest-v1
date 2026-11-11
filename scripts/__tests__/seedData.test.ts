@@ -174,6 +174,7 @@ describe("parseSeedDocument", () => {
     expect(doc).toEqual({
       slug: "oscar",
       title: "Oscar Bluth",
+      kind: "article",
       sourceUrl: "https://example.org/Oscar",
       license: "CC-BY-SA 3.0",
       text: "Twin.",

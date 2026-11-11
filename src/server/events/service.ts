@@ -15,6 +15,7 @@ import {
 import { inDateOrder } from "@/lib/events/timeline";
 import { assertCan, type Actor } from "@/server/actor";
 import { recordChanges } from "@/server/changelog";
+import { sourcesFor, type SourceRef } from "@/server/sources";
 
 // ───────────────────────────── shapes ─────────────────────────────
 
@@ -112,6 +113,12 @@ async function loadEvent(db: Db, id: string): Promise<EventView | null> {
 export async function getEvent(actor: Actor, id: string): Promise<EventView | null> {
   assertCan(actor, "read");
   return loadEvent(getDb(), id);
+}
+
+/** The documents and other sources this event is recorded in. */
+export async function getEventSources(actor: Actor, id: string): Promise<SourceRef[]> {
+  assertCan(actor, "read");
+  return UUID.test(id) ? sourcesFor("event", id) : [];
 }
 
 // ───────────────────────────── writing ─────────────────────────────

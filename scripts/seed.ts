@@ -136,6 +136,7 @@ try {
     placeIds.set(place.slug, row.id);
   }
 
+  const eventIds = new Map<string, string>();
   for (const event of data.events) {
     const fields = {
       kind: upper(event.kind),
@@ -151,6 +152,7 @@ try {
         update: fields,
         select: { id: true },
       });
+      eventIds.set(event.slug, row.id);
       await tx.eventParticipant.deleteMany({ where: { eventId: row.id } });
       await tx.eventParticipant.createMany({
         data: event.participants.map((participant) => ({
@@ -162,44 +164,82 @@ try {
     });
   }
 
+  const sourceIds = new Map<string, string>();
   for (const doc of data.documents) {
     const sha256 = createHash("sha256").update(doc.text).digest("hex");
-    const citation = `${doc.title} (Arrested Development Wiki, ${doc.license})`;
-    // A document is matched on where it came from, so an edited seed file
-    // replaces its earlier text instead of adding a second copy.
+    const article = doc.kind === "article";
+    // A wiki page is matched on where it came from, a family paper on its
+    // title, so an edited seed file replaces its earlier text instead of
+    // adding a second copy.
     const existing = await db.document.findFirst({
-      where: { originalUrl: doc.sourceUrl },
+      where: article
+        ? { originalUrl: doc.sourceUrl }
+        : { kind: upper(doc.kind), title: doc.title, originalUrl: null },
       select: { id: true, sha256: true },
     });
-    if (existing?.sha256 === sha256) continue;
-    const chunks = chunkMarkdown(doc.text);
+    const sourceKind = article ? ("EXTERNAL" as const) : ("DOCUMENT" as const);
+    const sourceFields = {
+      citation: article ? `${doc.title} (Arrested Development Wiki, ${doc.license})` : doc.title,
+      url: doc.sourceUrl ?? null,
+    };
+
     await db.$transaction(async (tx) => {
-      const fields = {
-        sha256,
-        kind: "ARTICLE" as const,
-        title: doc.title,
-        originalUrl: doc.sourceUrl,
-        mimeType: "text/markdown",
-        bytes: Buffer.byteLength(doc.text),
-        text: doc.text,
-      };
-      const row = existing
-        ? await tx.document.update({ where: { id: existing.id }, data: fields })
-        : await tx.document.create({ data: fields });
-      await tx.documentChunk.deleteMany({ where: { documentId: row.id } });
-      await tx.documentChunk.createMany({
-        data: chunks.map((chunk, position) => ({ documentId: row.id, position, ...chunk })),
-      });
+      let id = existing?.id;
+      if (existing?.sha256 !== sha256) {
+        const fields = {
+          sha256,
+          kind: upper(doc.kind),
+          title: doc.title,
+          originalUrl: doc.sourceUrl ?? null,
+          mimeType: "text/markdown",
+          bytes: Buffer.byteLength(doc.text),
+          text: doc.text,
+          ...toColumns(resolveDate(doc.date)),
+        };
+        const row = existing
+          ? await tx.document.update({ where: { id: existing.id }, data: fields })
+          : await tx.document.create({ data: fields });
+        id = row.id;
+        await tx.documentChunk.deleteMany({ where: { documentId: row.id } });
+        await tx.documentChunk.createMany({
+          data: chunkMarkdown(doc.text).map((chunk, position) => ({
+            documentId: row.id,
+            position,
+            ...chunk,
+          })),
+        });
+      }
       const source = await tx.source.findFirst({
-        where: { documentId: row.id, kind: "EXTERNAL" },
+        where: { documentId: id, kind: sourceKind },
         select: { id: true },
       });
-      const sourceFields = { citation, url: doc.sourceUrl };
-      if (source) await tx.source.update({ where: { id: source.id }, data: sourceFields });
-      else {
-        await tx.source.create({ data: { kind: "EXTERNAL", documentId: row.id, ...sourceFields } });
-      }
+      const saved = source
+        ? await tx.source.update({ where: { id: source.id }, data: sourceFields })
+        : await tx.source.create({ data: { kind: sourceKind, documentId: id, ...sourceFields } });
+      sourceIds.set(doc.slug, saved.id);
     });
+  }
+
+  // An event recorded in a document is tied to it by an accepted claim, the
+  // same trail a reviewer leaves when accepting something an agent proposed.
+  for (const event of data.events) {
+    for (const slug of event.sources ?? []) {
+      const link = {
+        sourceId: sourceIds.get(slug)!,
+        appliedType: "event",
+        appliedId: eventIds.get(event.slug)!,
+      };
+      const fields = {
+        status: "ACCEPTED" as const,
+        statement: event.title,
+        action: "event.create",
+        payload: { slug: event.slug },
+        createdByAgent: "seed",
+      };
+      const claim = await db.claim.findFirst({ where: link, select: { id: true } });
+      if (claim) await db.claim.update({ where: { id: claim.id }, data: fields });
+      else await db.claim.create({ data: { ...link, ...fields } });
+    }
   }
 
   // Test accounts, so specs can sign in as a known family member.
