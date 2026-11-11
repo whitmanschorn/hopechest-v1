@@ -13,7 +13,13 @@
     "test:e2e": "playwright test",
     "test:smoke": "playwright test --grep @smoke",
     "pr-size": "node scripts/pr-size.ts",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run test:smoke"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:smoke",
+    "postinstall": "prisma generate",
+    "db:up": "docker start hopechest-pg 2>/dev/null || docker run -d --name hopechest-pg -e POSTGRES_PASSWORD=hopechest -e POSTGRES_DB=hopechest -p 54329:5432 pgvector/pgvector:pg17",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:check": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code && node scripts/check-migrations.ts",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@mantine/core": "^9.8.0",
@@ -23,8 +29,11 @@
     "@mantine/hooks": "^9.8.0",
     "@mantine/modals": "^9.8.0",
     "@mantine/notifications": "^9.8.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "dayjs": "^1.11.23",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -32,8 +41,10 @@
     "@playwright/test": "^1.65.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.10",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "jest": "^30.5.2",
@@ -41,7 +52,9 @@
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.10.0",
+    "prisma": "^7.10.1",
     "ts-jest": "^29.4.15",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "engines": {

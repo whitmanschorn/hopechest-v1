@@ -29,6 +29,10 @@ places, and an Ask feature that answers from it. One deployment serves one famil
 | `npx playwright test --last-failed`      | Re-run only what failed                                                     |
 | `npm run test:smoke`                     | Specs tagged `@smoke`                                                       |
 | `npm run pr-size`                        | Changed-line count against `origin/main`                                    |
+| `npm run db:up`                          | Start local Postgres (Docker, port 54329)                                   |
+| `npm run db:deploy`                      | Apply migrations                                                            |
+| `npm run db:migrate -- --name x`         | Write and apply a migration after editing `prisma/schema.prisma`            |
+| `npm run db:check`                       | Schema and migrations agree, and migration rules hold                       |
 
 Node 24. npm, not pnpm or yarn.
 
@@ -42,6 +46,13 @@ Node 24. npm, not pnpm or yarn.
 
 Configuration is read through `src/lib/chest.ts`. Dev-only shortcuts must check
 `isProduction()` and refuse to run there. Variable names are listed in `.env.example`.
+
+## Database
+
+Schema is `prisma/schema.prisma`; rules for changing it are in `prisma/README.md`. Read them
+before writing a migration. Get a client with `getDb()` from `src/lib/db.ts`. Family-history
+dates use the `date*` column group through `src/lib/fuzzyDate.ts`; never store a date as display
+text alone.
 
 ## Working in parallel
 

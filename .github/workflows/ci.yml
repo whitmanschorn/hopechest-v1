@@ -36,8 +36,25 @@ jobs:
     timeout-minutes: 20
     env:
       HOPECHEST_ENV: preview
+    services:
+      # Used when no Neon branch is available: pushes to main, pull requests
+      # from forks, and before the staging Neon project is connected.
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: hopechest
+          POSTGRES_DB: hopechest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -46,6 +63,42 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+
+      # Each pull request gets its own copy-on-write branch of the staging
+      # database, so its migrations run against real staging data without
+      # touching staging or any other pull request.
+      - name: Create Neon branch of staging
+        id: neon
+        if: >-
+          github.event_name == 'pull_request' && vars.NEON_PROJECT_ID != '' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Choose database
+        env:
+          NEON_URL: ${{ steps.neon.outputs.db_url }}
+          NEON_URL_POOLED: ${{ steps.neon.outputs.db_url_pooled }}
+        run: |
+          local_url="postgresql://postgres:hopechest@localhost:5432/hopechest"
+          if [ -n "$NEON_URL" ]; then
+            echo "::add-mask::$NEON_URL"
+            echo "::add-mask::$NEON_URL_POOLED"
+            echo "Using Neon branch pr-${{ github.event.number }}"
+          else
+            echo "Using the Postgres service container"
+          fi
+          echo "DATABASE_URL_UNPOOLED=${NEON_URL:-$local_url}" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=${NEON_URL_POOLED:-$local_url}" >> "$GITHUB_ENV"
+
+      - name: Apply migrations
+        run: npm run db:deploy
+      - name: Check schema and migration rules
+        run: |
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+          node scripts/check-migrations.ts "${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}"
       - run: npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium

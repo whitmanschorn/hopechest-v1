@@ -1,0 +1,787 @@
+// Hopechest v1 schema. One database serves one family, so no table carries a
+// family id. Conventions:
+//   - uuid v7 ids, timestamptz timestamps, snake_case table and column names
+//   - dates of family history are "fuzzy": see the date* column group, which
+//     src/lib/fuzzyDate.ts reads and writes
+//   - anything Prisma cannot express (vector indexes, CHECK constraints, the
+//     document search trigger) lives in the migration SQL and is listed in
+//     prisma/README.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── shared enums ─────────────────────────────
+
+enum DatePrecision {
+  DAY
+  MONTH
+  YEAR
+  CIRCA
+}
+
+enum Role {
+  ADMIN
+  CONTRIBUTOR
+  VIEWER
+}
+
+// ───────────────────────────── knowledge graph ──────────────────────────
+
+enum Gender {
+  FEMALE
+  MALE
+  OTHER
+}
+
+model Person {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  /// URL-safe handle, also the stable key seeds and imports upsert on.
+  slug            String   @unique
+  displayName     String   @map("display_name")
+  givenName       String?  @map("given_name")
+  familyName      String?  @map("family_name")
+  /// Family name at birth, when it differs (the demo's "maiden name").
+  birthFamilyName String?  @map("birth_family_name")
+  nicknames       String[]
+  alternateNames  String[] @map("alternate_names")
+  gender          Gender?
+  /// Null when unknown. Drives privacy defaults and "in memory of" wording.
+  isLiving        Boolean? @map("is_living")
+  notes           String?
+  avatarUrl       String?  @map("avatar_url")
+  avatarPhotoId   String?  @map("avatar_photo_id") @db.Uuid
+  /// Circle crop over the avatar photo: { x, y, size } as percentages.
+  avatarCrop      Json?    @map("avatar_crop")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  avatarPhoto       Photo?             @relation("PersonAvatar", fields: [avatarPhotoId], references: [id], onDelete: SetNull)
+  user              User?
+  relationshipsFrom Relationship[]     @relation("RelationshipFrom")
+  relationshipsTo   Relationship[]     @relation("RelationshipTo")
+  events            EventParticipant[]
+  photoTags         PhotoPerson[]
+  faces             Face[]
+  invites           Invite[]
+
+  @@map("people")
+}
+
+enum RelationshipType {
+  /// from = parent, to = child
+  PARENT
+  /// order does not matter; stored with the smaller id first
+  PARTNER
+}
+
+enum RelationshipQualifier {
+  BIOLOGICAL
+  ADOPTIVE
+  STEP
+  FOSTER
+  /// Parent on paper, where biology is different or disputed.
+  LEGAL
+  MARRIED
+  PARTNERED
+  UNKNOWN
+}
+
+enum RelationshipEndReason {
+  DIVORCE
+  SEPARATION
+  ANNULMENT
+  DEATH
+  OTHER
+}
+
+/// An edge of the family tree. Dates are not stored here: a marriage, divorce
+/// or death is an Event with participants, which is where "when" is answered.
+model Relationship {
+  id           String                 @id @default(uuid(7)) @db.Uuid
+  type         RelationshipType
+  fromPersonId String                 @map("from_person_id") @db.Uuid
+  toPersonId   String                 @map("to_person_id") @db.Uuid
+  qualifier    RelationshipQualifier  @default(UNKNOWN)
+  /// Null while the relationship is current.
+  endReason    RelationshipEndReason? @map("end_reason")
+  note         String?
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  from Person @relation("RelationshipFrom", fields: [fromPersonId], references: [id], onDelete: Cascade)
+  to   Person @relation("RelationshipTo", fields: [toPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([type, fromPersonId, toPersonId, qualifier])
+  @@index([toPersonId])
+  @@map("relationships")
+}
+
+model Place {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  slug      String   @unique
+  label     String
+  street    String?
+  city      String?
+  region    String?
+  country   String?
+  lat       Float?
+  lng       Float?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  events    Event[]
+  photos    Photo[]
+  documents Document[]
+
+  @@map("places")
+}
+
+enum EventKind {
+  BIRTH
+  DEATH
+  MARRIAGE
+  DIVORCE
+  MOVE
+  IMMIGRATION
+  MILITARY
+  EDUCATION
+  WORK
+  OTHER
+}
+
+model Event {
+  id            String         @id @default(uuid(7)) @db.Uuid
+  /// Optional stable key for seeds and imports.
+  slug          String?        @unique
+  kind          EventKind
+  title         String
+  description   String?
+  placeId       String?        @map("place_id") @db.Uuid
+  dateYear      Int?           @map("date_year")
+  dateMonth     Int?           @map("date_month")
+  dateDay       Int?           @map("date_day")
+  datePrecision DatePrecision? @map("date_precision")
+  dateDisplay   String?        @map("date_display")
+  /// True when the date was inferred rather than read off a record.
+  dateDeduced   Boolean        @default(false) @map("date_deduced")
+  dateClue      String?        @map("date_clue")
+  /// yyyymmdd with zeros for unknown parts, for ordering timelines.
+  dateSortKey   Int?           @map("date_sort_key")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  place        Place?             @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  participants EventParticipant[]
+
+  @@index([kind])
+  @@index([dateMonth, dateDay])
+  @@index([dateSortKey])
+  @@index([placeId])
+  @@map("events")
+}
+
+enum EventRole {
+  /// The person the event is about: the one born, the two who married.
+  SUBJECT
+  PARENT
+  CHILD
+  OFFICIANT
+  WITNESS
+  OTHER
+}
+
+model EventParticipant {
+  eventId  String    @map("event_id") @db.Uuid
+  personId String    @map("person_id") @db.Uuid
+  role     EventRole @default(SUBJECT)
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, personId])
+  @@index([personId])
+  @@map("event_participants")
+}
+
+// ───────────────────────────── provenance ───────────────────────────────
+
+enum SourceKind {
+  DOCUMENT
+  PHOTO
+  MESSAGE
+  IMPORT
+  /// Something a family member said, outside a recorded conversation.
+  TESTIMONY
+  EXTERNAL
+}
+
+/// Where a piece of knowledge came from. Exactly which of the optional links is
+/// set depends on `kind`.
+model Source {
+  id            String     @id @default(uuid(7)) @db.Uuid
+  kind          SourceKind
+  /// Human-readable citation, e.g. "Letter from Klara, 1933, page 2".
+  citation      String
+  url           String?
+  documentId    String?    @map("document_id") @db.Uuid
+  photoId       String?    @map("photo_id") @db.Uuid
+  messageId     String?    @map("message_id") @db.Uuid
+  ingestBatchId String?    @map("ingest_batch_id") @db.Uuid
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  document    Document?    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  photo       Photo?       @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  message     Message?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  ingestBatch IngestBatch? @relation(fields: [ingestBatchId], references: [id], onDelete: SetNull)
+  claims      Claim[]
+
+  @@index([documentId])
+  @@index([photoId])
+  @@map("sources")
+}
+
+enum ClaimStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+}
+
+/// One statement about the family, with its source. Anything a model or agent
+/// extracts starts as PROPOSED; accepting it writes the graph row it describes
+/// and records which row that was.
+model Claim {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  status          ClaimStatus @default(PROPOSED)
+  /// Plain-language statement shown to reviewers.
+  statement       String
+  /// What accepting would change, e.g. "event.create", "relationship.create",
+  /// "person.update".
+  action          String
+  /// Arguments for `action`, validated by the claims service.
+  payload         Json
+  confidence      Float?
+  sourceId        String?     @map("source_id") @db.Uuid
+  /// Row written when the claim was accepted.
+  appliedType     String?     @map("applied_type")
+  appliedId       String?     @map("applied_id") @db.Uuid
+  createdByUserId String?     @map("created_by_user_id") @db.Uuid
+  /// Name of the agent or model that proposed it, when not a person.
+  createdByAgent  String?     @map("created_by_agent")
+  reviewedById    String?     @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?   @map("reviewed_at") @db.Timestamptz
+  reviewNote      String?     @map("review_note")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  source     Source? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdBy  User?   @relation("ClaimCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reviewedBy User?   @relation("ClaimReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([appliedType, appliedId])
+  @@map("claims")
+}
+
+/// Field-level edit history for people, events, places and relationships.
+model Changelog {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  entityType    String   @map("entity_type")
+  entityId      String   @map("entity_id") @db.Uuid
+  field         String
+  before        String?
+  after         String?
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  actorApiKeyId String?  @map("actor_api_key_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actorUser   User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorApiKey ApiKey? @relation(fields: [actorApiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@map("changelog")
+}
+
+// ───────────────────────────── accounts ─────────────────────────────────
+
+model User {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  /// E.164, e.g. +14155550123.
+  phone       String    @unique
+  role        Role      @default(VIEWER)
+  personId    String?   @unique @map("person_id") @db.Uuid
+  /// Set when the person finishes the join flow (name, birthday, picture).
+  onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz
+  disabledAt  DateTime? @map("disabled_at") @db.Timestamptz
+  lastSeenAt  DateTime? @map("last_seen_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  person         Person?        @relation(fields: [personId], references: [id], onDelete: SetNull)
+  sessions       Session[]
+  invitesSent    Invite[]       @relation("InviteSender")
+  apiKeys        ApiKey[]
+  photos         Photo[]
+  documents      Document[]
+  comments       Comment[]
+  reactions      Reaction[]
+  conversations  Conversation[]
+  ingestBatches  IngestBatch[]
+  changelog      Changelog[]
+  claimsCreated  Claim[]        @relation("ClaimCreatedBy")
+  claimsReviewed Claim[]        @relation("ClaimReviewedBy")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  /// SHA-256 of the cookie value; the raw token is never stored.
+  tokenHash String   @unique @map("token_hash")
+  userId    String   @map("user_id") @db.Uuid
+  userAgent String?  @map("user_agent")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Codes issued by the built-in dev provider. With Twilio Verify the code lives
+/// at Twilio and this table stays empty.
+model VerificationCode {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  phone      String
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([phone, createdAt])
+  @@map("verification_codes")
+}
+
+/// Append-only log used for rate limiting ("5 code requests per phone per hour").
+model AuthAttempt {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  /// What is being limited, e.g. "code:+14155550123" or "ip:203.0.113.9".
+  key       String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([key, createdAt])
+  @@map("auth_attempts")
+}
+
+enum InviteStatus {
+  PENDING
+  SENT
+  ACCEPTED
+  REVOKED
+}
+
+model Invite {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  personId    String       @map("person_id") @db.Uuid
+  phone       String
+  role        Role         @default(VIEWER)
+  status      InviteStatus @default(PENDING)
+  /// SHA-256 of the token in the /join/<token> link.
+  tokenHash   String       @unique @map("token_hash")
+  invitedById String?      @map("invited_by_id") @db.Uuid
+  sentAt      DateTime?    @map("sent_at") @db.Timestamptz
+  acceptedAt  DateTime?    @map("accepted_at") @db.Timestamptz
+  expiresAt   DateTime     @map("expires_at") @db.Timestamptz
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  person    Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  invitedBy User?  @relation("InviteSender", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@index([personId])
+  @@map("invites")
+}
+
+/// Credentials for agents, the CLI and the MCP server.
+model ApiKey {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  name        String
+  /// First characters of the key, shown in the UI to tell keys apart.
+  prefix      String
+  keyHash     String    @unique @map("key_hash")
+  /// Any of: read, write, ingest, admin.
+  scopes      String[]
+  createdById String?   @map("created_by_id") @db.Uuid
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  ingestBatches IngestBatch[]
+  changelog     Changelog[]
+
+  @@map("api_keys")
+}
+
+// ───────────────────────────── photos ───────────────────────────────────
+
+enum PublishStatus {
+  /// Arrived through ingest and waiting in the review queue.
+  NEEDS_REVIEW
+  PUBLISHED
+}
+
+model Photo {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  /// SHA-256 of the original file; the dedupe key for ingest.
+  sha256           String         @unique
+  originalUrl      String         @map("original_url")
+  displayUrl       String         @map("display_url")
+  thumbUrl         String         @map("thumb_url")
+  width            Int
+  height           Int
+  mimeType         String         @map("mime_type")
+  bytes            Int
+  originalFilename String?        @map("original_filename")
+  caption          String?
+  photographer     String?
+  status           PublishStatus  @default(PUBLISHED)
+  placeId          String?        @map("place_id") @db.Uuid
+  uploadedById     String?        @map("uploaded_by_id") @db.Uuid
+  exif             Json?
+  dateYear         Int?           @map("date_year")
+  dateMonth        Int?           @map("date_month")
+  dateDay          Int?           @map("date_day")
+  datePrecision    DatePrecision? @map("date_precision")
+  dateDisplay      String?        @map("date_display")
+  dateDeduced      Boolean        @default(false) @map("date_deduced")
+  dateClue         String?        @map("date_clue")
+  dateSortKey      Int?           @map("date_sort_key")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  place       Place?        @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  uploadedBy  User?         @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  people      PhotoPerson[]
+  faces       Face[]
+  albums      AlbumPhoto[]
+  comments    Comment[]
+  reactions   Reaction[]
+  sources     Source[]
+  ingestItems IngestItem[]
+  avatarOf    Person[]      @relation("PersonAvatar")
+  coverOf     Album[]
+
+  @@index([status, createdAt])
+  @@index([dateMonth, dateDay])
+  @@index([dateSortKey])
+  @@index([placeId])
+  @@map("photos")
+}
+
+/// "This person is in this photo." Made by hand, or by confirming a face match.
+model PhotoPerson {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  photoId     String   @map("photo_id") @db.Uuid
+  personId    String   @map("person_id") @db.Uuid
+  /// Box as percentages of the image (0–100). Null for "in the photo, not sure where".
+  boxX        Float?   @map("box_x")
+  boxY        Float?   @map("box_y")
+  boxW        Float?   @map("box_w")
+  boxH        Float?   @map("box_h")
+  /// The detected face this tag came from, if any.
+  faceId      String?  @unique @map("face_id") @db.Uuid
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  photo  Photo  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  face   Face?  @relation(fields: [faceId], references: [id], onDelete: SetNull)
+
+  @@unique([photoId, personId])
+  @@index([personId])
+  @@map("photo_people")
+}
+
+/// A face found by the detector. `personId` is set only once a human confirms
+/// who it is; suggestions are computed from embeddings and never stored here.
+model Face {
+  id                String                      @id @default(uuid(7)) @db.Uuid
+  photoId           String                      @map("photo_id") @db.Uuid
+  boxX              Float                       @map("box_x")
+  boxY              Float                       @map("box_y")
+  boxW              Float                       @map("box_w")
+  boxH              Float                       @map("box_h")
+  /// Detector confidence, 0–1.
+  score             Float?
+  /// Name of the model that produced `embedding`; vectors from different
+  /// models are never compared.
+  model             String
+  embedding         Unsupported("vector(128)")?
+  personId          String?                     @map("person_id") @db.Uuid
+  confirmedAt       DateTime?                   @map("confirmed_at") @db.Timestamptz
+  /// People a reviewer said this face is not.
+  rejectedPersonIds String[]                    @map("rejected_person_ids") @db.Uuid
+  /// "Not a face" or "nobody we need to name".
+  ignored           Boolean                     @default(false)
+  createdAt         DateTime                    @default(now()) @map("created_at") @db.Timestamptz
+
+  photo  Photo        @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  person Person?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+  tag    PhotoPerson?
+
+  @@index([photoId])
+  @@index([personId])
+  @@map("faces")
+}
+
+model Album {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  title        String
+  description  String?
+  coverPhotoId String?  @map("cover_photo_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  coverPhoto Photo?       @relation(fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  photos     AlbumPhoto[]
+
+  @@map("albums")
+}
+
+model AlbumPhoto {
+  albumId  String @map("album_id") @db.Uuid
+  photoId  String @map("photo_id") @db.Uuid
+  position Int    @default(0)
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, photoId])
+  @@index([photoId])
+  @@map("album_photos")
+}
+
+model Comment {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  photoId   String    @map("photo_id") @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
+  authorId  String?   @map("author_id") @db.Uuid
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  editedAt  DateTime? @map("edited_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  photo     Photo      @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  parent    Comment?   @relation("CommentThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies   Comment[]  @relation("CommentThread")
+  author    User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  reactions Reaction[]
+
+  @@index([photoId, createdAt])
+  @@map("comments")
+}
+
+/// A reaction targets a photo or a comment, never both (CHECK in migration SQL).
+model Reaction {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  photoId   String?  @map("photo_id") @db.Uuid
+  commentId String?  @map("comment_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  photo   Photo?   @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId, emoji])
+  @@unique([commentId, userId, emoji])
+  @@map("reactions")
+}
+
+// ───────────────────────────── documents ────────────────────────────────
+
+enum DocumentKind {
+  LETTER
+  RECORD
+  RECIPE
+  STORY
+  ARTICLE
+  OTHER
+}
+
+model Document {
+  id            String                   @id @default(uuid(7)) @db.Uuid
+  sha256        String                   @unique
+  kind          DocumentKind             @default(OTHER)
+  title         String
+  /// Null for text typed or pasted straight in.
+  originalUrl   String?                  @map("original_url")
+  mimeType      String?                  @map("mime_type")
+  bytes         Int?
+  /// Extracted or transcribed text. Null until extraction has run.
+  text          String?
+  /// Maintained by a trigger from title and text; see the migration SQL.
+  searchVector  Unsupported("tsvector")? @map("search_vector")
+  status        PublishStatus            @default(PUBLISHED)
+  placeId       String?                  @map("place_id") @db.Uuid
+  uploadedById  String?                  @map("uploaded_by_id") @db.Uuid
+  dateYear      Int?                     @map("date_year")
+  dateMonth     Int?                     @map("date_month")
+  dateDay       Int?                     @map("date_day")
+  datePrecision DatePrecision?           @map("date_precision")
+  dateDisplay   String?                  @map("date_display")
+  dateDeduced   Boolean                  @default(false) @map("date_deduced")
+  dateClue      String?                  @map("date_clue")
+  dateSortKey   Int?                     @map("date_sort_key")
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+
+  place       Place?          @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  uploadedBy  User?           @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  chunks      DocumentChunk[]
+  sources     Source[]
+  ingestItems IngestItem[]
+
+  @@index([searchVector], type: Gin)
+  @@index([status, createdAt])
+  @@map("documents")
+}
+
+/// A passage of a document, small enough to cite and to hand to a model.
+model DocumentChunk {
+  id         String  @id @default(uuid(7)) @db.Uuid
+  documentId String  @map("document_id") @db.Uuid
+  position   Int
+  heading    String?
+  text       String
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, position])
+  @@map("document_chunks")
+}
+
+// ───────────────────────────── ingest ───────────────────────────────────
+
+enum IngestSource {
+  UPLOAD
+  FOLDER
+  SCAN
+  FACEBOOK_EXPORT
+  FACEBOOK_CAPTURE
+}
+
+enum IngestBatchStatus {
+  OPEN
+  COMPLETE
+}
+
+model IngestBatch {
+  id                String            @id @default(uuid(7)) @db.Uuid
+  label             String
+  source            IngestSource
+  status            IngestBatchStatus @default(OPEN)
+  createdByUserId   String?           @map("created_by_user_id") @db.Uuid
+  createdByApiKeyId String?           @map("created_by_api_key_id") @db.Uuid
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  completedAt       DateTime?         @map("completed_at") @db.Timestamptz
+
+  createdByUser   User?        @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdByApiKey ApiKey?      @relation(fields: [createdByApiKeyId], references: [id], onDelete: SetNull)
+  items           IngestItem[]
+  sources         Source[]
+
+  @@map("ingest_batches")
+}
+
+enum IngestItemKind {
+  PHOTO
+  DOCUMENT
+}
+
+enum IngestItemStatus {
+  RECEIVED
+  PROCESSED
+  /// The same file was already in the chest; nothing new was created.
+  DUPLICATE
+  FAILED
+}
+
+model IngestItem {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  batchId          String           @map("batch_id") @db.Uuid
+  kind             IngestItemKind
+  status           IngestItemStatus @default(RECEIVED)
+  sha256           String
+  originalFilename String?          @map("original_filename")
+  /// Metadata that came with the file: caption, date text, people names, source URL.
+  sidecar          Json?
+  error            String?
+  photoId          String?          @map("photo_id") @db.Uuid
+  documentId       String?          @map("document_id") @db.Uuid
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  batch    IngestBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  photo    Photo?      @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  document Document?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, sha256])
+  @@index([sha256])
+  @@map("ingest_items")
+}
+
+// ───────────────────────────── conversations ────────────────────────────
+
+model Conversation {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, updatedAt])
+  @@map("conversations")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum Modality {
+  TEXT
+  /// Reserved for voice chat: `content` holds the transcript, `audioUrl` the recording.
+  VOICE
+}
+
+model Message {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  role           MessageRole
+  modality       Modality    @default(TEXT)
+  content        String
+  audioUrl       String?     @map("audio_url")
+  toolCalls      Json?       @map("tool_calls")
+  /// Sources the answer rests on: [{ type, id, label }].
+  citations      Json?
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sources      Source[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
