@@ -149,6 +149,7 @@ async function findOrCreateUser(phone: string) {
           phone,
           role: isAdmin ? "ADMIN" : invite!.role,
           personId: invite && !personTaken ? invite.personId : null,
+          email: invite?.email ?? null,
         },
       });
       if (invite) {

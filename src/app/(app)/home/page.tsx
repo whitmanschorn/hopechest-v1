@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Container, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { requireActor } from "@/server/auth/session";
+import { Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { LinkButton } from "@/components/LinkButton";
+import { requireActor, requireUser } from "@/server/auth/session";
 import { getChestSummary, type ChestSummary } from "@/server/chest/summary";
 
 export const metadata: Metadata = { title: "Home · Hopechest" };
@@ -16,6 +17,8 @@ const COUNTS: { key: keyof ChestSummary; one: string; many: string }[] = [
 export default async function HomePage() {
   const actor = await requireActor("read");
   const summary = await getChestSummary(actor);
+  // Someone who signed in without going through an invite link (the first admin) has no profile yet.
+  const unfinished = (await requireUser()).onboardedAt === null;
   const empty = COUNTS.every(({ key }) => summary[key] === 0);
   return (
     <Container size="md" py="xl">
@@ -30,6 +33,16 @@ export default async function HomePage() {
               : "What the chest holds so far."}
           </Text>
         </Stack>
+        {unfinished && (
+          <Paper p="md" radius="md" withBorder bg="var(--hc-surface)" data-testid="finish-profile">
+            <Group justify="space-between" gap="sm">
+              <Text>Add your name and birthday so the family tree has you in it.</Text>
+              <LinkButton href="/welcome" size="compact-md" data-testid="finish-profile-link">
+                Finish your profile
+              </LinkButton>
+            </Group>
+          </Paper>
+        )}
         <SimpleGrid cols={{ base: 2, xs: 3, sm: 5 }} data-testid="home-summary">
           {COUNTS.map(({ key, one, many }) => (
             <Paper key={key} p="md" radius="md" withBorder bg="var(--hc-surface)">

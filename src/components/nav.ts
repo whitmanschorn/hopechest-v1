@@ -4,6 +4,7 @@ import {
   IconMapPin,
   IconPhoto,
   IconTimeline,
+  IconUserShield,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -28,4 +29,5 @@ export const NAV: readonly NavItem[] = [
   { href: "/timeline", label: "Timeline", icon: IconTimeline },
   { href: "/places", label: "Places", icon: IconMapPin },
   { href: "/map", label: "Map", icon: IconMap },
+  { href: "/members", label: "Members", icon: IconUserShield, needs: "admin" },
 ];

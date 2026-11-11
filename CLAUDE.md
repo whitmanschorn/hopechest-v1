@@ -77,6 +77,10 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - 555-01xx numbers (and `TEST_PHONE_ALLOWLIST`) are test numbers: outside production their codes
   appear on screen instead of being texted. Specs sign in with them; `(202) 555-0101` is the admin.
   Production always uses Twilio and never shows a code.
+- Invites (`src/server/invites/`): an admin enters a name, email and mobile number on `/members`
+  and gets a `/join/<token>` link to send by hand. Nothing is texted until the invited person
+  opens the link and asks for their code. The token is stored so the link can be copied again;
+  it cannot sign anyone in without the code sent to the invited phone.
 - The demo door (`/try`): where `DEMO_PASSWORD` is set, anyone with it can sign in as any family
   member, as a viewer or contributor, without a phone. Such a session belongs to one shared
   "demo-visitor" account and carries the person it stands in for (`src/lib/auth/viewAs.ts`).

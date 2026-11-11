@@ -103,7 +103,7 @@ Ingest, faces, documents, conversations:
 4. App shell on Mantine `AppShell`, with the demo's fonts and palette as a Mantine theme (light and dark).
 5. Bluth seed + staging project live.
 
-**M1 Core (parallel sub-agents after M0)** 6. People, relationships, kinship, person history. 7. Invites, onboarding, profile picture crop. 8. Photos: direct upload, derivatives, tagging, albums, comments. 9. Events, timeline, places, map.
+**M1 Core (parallel sub-agents after M0)** 6. People, relationships, kinship, person history. 7. Invites and onboarding (changed during the build: the admin sends the link by hand; no invite texts). Profile picture crop follows separately. 8. Photos: direct upload, derivatives, tagging, albums, comments. 9. Events, timeline, places, map.
 
 **M2 Agent access:** 10. REST + API keys. 11. MCP server + `.mcp.json`. 12. CLI skeleton.
 
