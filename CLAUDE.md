@@ -33,6 +33,9 @@ places, and an Ask feature that answers from it. One deployment serves one famil
 | `npm run db:deploy`                      | Apply migrations                                                            |
 | `npm run db:migrate -- --name x`         | Write and apply a migration after editing `prisma/schema.prisma`            |
 | `npm run db:check`                       | Schema and migrations agree, and migration rules hold                       |
+| `npm run db:seed`                        | Load or refresh the Bluth seed (safe to re-run; refuses production)         |
+| `npm run db:reset`                       | Erase the local database, re-apply migrations, load the seed                |
+| `npm run db:pull`                        | Replace the local database with a copy of staging's                         |
 
 Node 24. npm, not pnpm or yarn.
 
@@ -53,6 +56,14 @@ Schema is `prisma/schema.prisma`; rules for changing it are in `prisma/README.md
 before writing a migration. Get a client with `getDb()` from `src/lib/db.ts`. Family-history
 dates use the `date*` column group through `src/lib/fuzzyDate.ts`; never store a date as display
 text alone.
+
+The Bluth seed (`seed/bluth/`, described in its `README.md`) is the shared test data for local
+work, CI and staging. Specs may rely on it being present and may add rows, but must not edit or
+delete seeded rows. Changing a seeded fact means editing the seed file and noting why in
+`seed/bluth/CORRECTIONS.md`.
+
+`npm run db:reset` erases data, so Prisma refuses it from an agent without the owner's say-so.
+Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing anything.
 
 ## Auth and permissions
 

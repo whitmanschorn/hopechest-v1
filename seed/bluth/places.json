@@ -1,0 +1,96 @@
+[
+  {
+    "slug": "model-home",
+    "label": "The model home, Sudden Valley",
+    "street": "1 Lucille Lane",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.6189,
+    "lng": -117.9298,
+    "notes": "The only finished house in the Sudden Valley development, and where most of the family lives after 2003. Accounts of where Sudden Valley lies differ (Newport Coast, or inland near Rancho Santa Margarita); the pin is approximate."
+  },
+  {
+    "slug": "balboa-towers",
+    "label": "Balboa Towers penthouse",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.6062,
+    "lng": -117.9312,
+    "notes": "Lucille's penthouse and Buster's home. Lucille Austero lives in the same building. George moved out in spring 2006."
+  },
+  {
+    "slug": "banana-stand",
+    "label": "Bluth's Original Frozen Banana Stand",
+    "street": "Oceanside Wharf boardwalk, Balboa Island",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.6057,
+    "lng": -117.8985,
+    "notes": "The family's first business. Burned down in 2003 with $250,000 in cash lining its walls, and later rebuilt."
+  },
+  {
+    "slug": "bluth-company",
+    "label": "Bluth Company offices",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.66,
+    "lng": -117.87,
+    "notes": "Offices of the family's property development firm. The pin is approximate."
+  },
+  {
+    "slug": "orange-county-prison",
+    "label": "Orange County Prison",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.75,
+    "lng": -117.85,
+    "notes": "Where George Sr. was held after his arrest in 2003. The pin is approximate."
+  },
+  {
+    "slug": "wee-britain",
+    "label": "Wee Britain",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.68,
+    "lng": -117.83,
+    "notes": "The British-themed district of Orange County, where Michael met Rita Leeds. The pin is approximate."
+  },
+  {
+    "slug": "cabin",
+    "label": "The family cabin",
+    "region": "CA",
+    "country": "USA",
+    "notes": "The cabin of many broken camping promises. Its location is not recorded."
+  },
+  {
+    "slug": "mexico",
+    "label": "Mexico",
+    "country": "Mexico",
+    "lat": 32.52,
+    "lng": -117.03,
+    "notes": "Where George Sr. hid after escaping custody. No town is recorded; the pin marks the border crossing."
+  },
+  {
+    "slug": "queen-mary",
+    "label": "RMS Queen Mary",
+    "city": "Long Beach",
+    "region": "CA",
+    "country": "USA",
+    "lat": 33.7526,
+    "lng": -118.1898,
+    "notes": "The ship Tobias rented for George's exoneration party in 2006. Lucille took it out to sea and it capsized. Not to be confused with the club of the same name that Tobias bought."
+  },
+  {
+    "slug": "marina-hornblower",
+    "label": "The Marina Hornblower",
+    "city": "Newport Beach",
+    "region": "CA",
+    "country": "USA",
+    "notes": "The boat on which George Sr.'s retirement party was held in 2003, and where the SEC arrested him."
+  }
+]

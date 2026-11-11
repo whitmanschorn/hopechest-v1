@@ -15,9 +15,12 @@
     "pr-size": "node scripts/pr-size.ts",
     "verify": "npm run lint && npm run typecheck && npm test && npm run test:smoke",
     "postinstall": "prisma generate",
-    "db:up": "docker start hopechest-pg 2>/dev/null || docker run -d --name hopechest-pg -e POSTGRES_PASSWORD=hopechest -e POSTGRES_DB=hopechest -p 54329:5432 pgvector/pgvector:pg17",
+    "db:up": "docker start hopechest-pg 2>/dev/null || docker run -d --name hopechest-pg -e POSTGRES_PASSWORD=hopechest -e POSTGRES_DB=hopechest -p 54329:5432 pgvector/pgvector:pg18",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "node scripts/seed.ts",
+    "db:reset": "node scripts/db-reset.ts",
+    "db:pull": "node scripts/db-pull.ts",
     "db:check": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code && node scripts/check-migrations.ts",
     "db:studio": "prisma studio"
   },

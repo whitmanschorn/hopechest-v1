@@ -1,0 +1,301 @@
+[
+  {
+    "slug": "george-sr-born",
+    "kind": "birth",
+    "title": "George Bluth Sr. born",
+    "date": "1940-09-24",
+    "participants": [{ "person": "george-sr" }]
+  },
+  {
+    "slug": "oscar-born",
+    "kind": "birth",
+    "title": "Oscar Bluth born",
+    "date": {
+      "value": "1940-09-24",
+      "deduced": true,
+      "clue": "Identical twin of George Sr., who was born on September 24, 1940. No record names Oscar's own birth date."
+    },
+    "participants": [{ "person": "oscar" }]
+  },
+  {
+    "slug": "banana-stand-founded",
+    "kind": "work",
+    "title": "The frozen banana stand opens",
+    "description": "The family's account is that the stand opened in 1953, though a ribbon-cutting ceremony was held in 1963. George took the idea from a Korean immigrant, whom Lucille later had deported.",
+    "place": "banana-stand",
+    "date": { "value": "c. 1953", "display": "1953, by the family's account" },
+    "participants": [{ "person": "george-sr" }]
+  },
+  {
+    "slug": "lindsay-born",
+    "kind": "birth",
+    "title": "Lindsay born",
+    "description": "Born Nellie. Her real birthday is unknown.",
+    "date": {
+      "value": "c. 1964",
+      "deduced": true,
+      "clue": "She is three years older than Michael, who was born in December 1967."
+    },
+    "participants": [{ "person": "lindsay" }, { "person": "mimi", "role": "parent" }]
+  },
+  {
+    "slug": "gob-born",
+    "kind": "birth",
+    "title": "G.O.B. born",
+    "date": {
+      "value": "c. 1965",
+      "deduced": true,
+      "clue": "The eldest son, born before Michael (December 1967). No record gives his birth date."
+    },
+    "participants": [{ "person": "gob" }]
+  },
+  {
+    "slug": "george-sr-lucille-married",
+    "kind": "marriage",
+    "title": "George Sr. and Lucille marry",
+    "description": "Lucille became pregnant with G.O.B. while working as a waitress at a Stuckey's, and the two married afterwards. She had been with George's twin Oscar before.",
+    "date": {
+      "value": "c. 1965",
+      "deduced": true,
+      "clue": "No record gives the wedding date. They married after Lucille became pregnant with G.O.B., their eldest, who was born around 1965; Michael followed in December 1967."
+    },
+    "participants": [{ "person": "george-sr" }, { "person": "lucille" }]
+  },
+  {
+    "slug": "michael-born",
+    "kind": "birth",
+    "title": "Michael Bluth born",
+    "description": "His birth certificate reads \"Nichael\" because of a typo.",
+    "date": "1967-12-14",
+    "participants": [{ "person": "michael" }]
+  },
+  {
+    "slug": "lindsay-adopted",
+    "kind": "other",
+    "title": "George Sr. and Lucille adopt Lindsay",
+    "description": "They adopted her before their rival Stan Sitwell could, and raised her as Michael's twin.",
+    "date": {
+      "value": "c. 1967",
+      "deduced": true,
+      "clue": "She was adopted at the age of three and was born around 1964."
+    },
+    "participants": [
+      { "person": "lindsay" },
+      { "person": "george-sr", "role": "parent" },
+      { "person": "lucille", "role": "parent" }
+    ]
+  },
+  {
+    "slug": "buster-born",
+    "kind": "birth",
+    "title": "Buster Bluth born",
+    "date": "1972",
+    "participants": [
+      { "person": "buster" },
+      { "person": "lucille", "role": "parent" },
+      { "person": "oscar", "role": "parent" }
+    ]
+  },
+  {
+    "slug": "cinco-de-cuatro-founded",
+    "kind": "other",
+    "title": "George Sr. and Lucille start Cinco de Cuatro",
+    "description": "A holiday held on the eve of the fifth of May.",
+    "date": "1982",
+    "participants": [{ "person": "george-sr" }, { "person": "lucille" }]
+  },
+  {
+    "slug": "annyong-born",
+    "kind": "birth",
+    "title": "Annyong born",
+    "date": {
+      "value": "c. 1986",
+      "deduced": true,
+      "clue": "He was found to be 18 years old in 2004, the year he was adopted."
+    },
+    "participants": [{ "person": "annyong" }]
+  },
+  {
+    "slug": "michael-tracey-married",
+    "kind": "marriage",
+    "title": "Michael and Tracey marry",
+    "description": "During Michael's second year of college.",
+    "date": "1989",
+    "participants": [{ "person": "michael" }, { "person": "tracey" }]
+  },
+  {
+    "slug": "maeby-born",
+    "kind": "birth",
+    "title": "Maeby Fünke born",
+    "date": "1990-09-22",
+    "participants": [{ "person": "maeby" }]
+  },
+  {
+    "slug": "george-michael-born",
+    "kind": "birth",
+    "title": "George Michael Bluth born",
+    "date": "1990-11-02",
+    "participants": [{ "person": "george-michael" }]
+  },
+  {
+    "slug": "tracey-died",
+    "kind": "death",
+    "title": "Tracey Bluth dies",
+    "description": "Of ovarian cancer, in the family beach cottage, after several months in a coma.",
+    "date": "c. 2000",
+    "participants": [{ "person": "tracey" }]
+  },
+  {
+    "slug": "funkes-move-to-california",
+    "kind": "move",
+    "title": "The Fünkes move back to California",
+    "description": "From Boston, after Tobias lost his job and his medical licence in Massachusetts.",
+    "place": "model-home",
+    "date": "2003",
+    "participants": [{ "person": "tobias" }, { "person": "lindsay" }, { "person": "maeby" }]
+  },
+  {
+    "slug": "gob-expelled-from-alliance",
+    "kind": "work",
+    "title": "G.O.B. is expelled from the Alliance of Magicians",
+    "description": "The group he founded threw him out after a television reporter revealed the secret of one of his illusions.",
+    "date": "2003",
+    "participants": [{ "person": "gob" }]
+  },
+  {
+    "slug": "george-sr-arrested",
+    "kind": "other",
+    "title": "George Sr. is arrested at his retirement party",
+    "description": "The SEC arrested him aboard the Marina Hornblower for fraud at the Bluth Company. The investigation for \"light treason\" over homes built in Iraq came later.",
+    "place": "marina-hornblower",
+    "date": "2003",
+    "participants": [{ "person": "george-sr" }, { "person": "lucille", "role": "witness" }]
+  },
+  {
+    "slug": "michael-takes-over",
+    "kind": "work",
+    "title": "Michael takes over the Bluth Company",
+    "description": "He stayed on to run the company after his father's arrest.",
+    "place": "bluth-company",
+    "date": "2003",
+    "participants": [{ "person": "michael" }]
+  },
+  {
+    "slug": "banana-stand-burns",
+    "kind": "other",
+    "title": "The banana stand burns down",
+    "description": "There was $250,000 in cash lining its walls. Accounts differ on who lit it and why: one says Michael burned it in protest, another that George Michael did to hide missing money.",
+    "place": "banana-stand",
+    "date": "2003",
+    "participants": [{ "person": "michael" }, { "person": "george-michael" }]
+  },
+  {
+    "slug": "annyong-adopted",
+    "kind": "other",
+    "title": "George Sr. and Lucille adopt Annyong",
+    "description": "Through the Korean Consulate of Child Services, to look more charitable to the SEC.",
+    "place": "balboa-towers",
+    "date": "2004",
+    "participants": [
+      { "person": "annyong" },
+      { "person": "george-sr", "role": "parent" },
+      { "person": "lucille", "role": "parent" }
+    ]
+  },
+  {
+    "slug": "tobias-lindsay-open-marriage",
+    "kind": "other",
+    "title": "Tobias and Lindsay try an open marriage",
+    "date": "2004",
+    "participants": [{ "person": "tobias" }, { "person": "lindsay" }]
+  },
+  {
+    "slug": "buster-army",
+    "kind": "military",
+    "title": "Buster joins the Army",
+    "description": "Lucille signed him up when a Michael Moore impersonator dared her to.",
+    "date": "2004",
+    "participants": [{ "person": "buster" }, { "person": "lucille", "role": "other" }]
+  },
+  {
+    "slug": "buster-seal",
+    "kind": "other",
+    "title": "Buster loses his left hand to a seal",
+    "description": "A seal in a bow tie bit it off while he swam in the ocean, which excused him from service for a time. He later wore a hook, and then a large bionic hand from the Army.",
+    "date": "2005",
+    "participants": [{ "person": "buster" }]
+  },
+  {
+    "slug": "oscar-jailed-as-george",
+    "kind": "other",
+    "title": "Oscar is jailed in his twin's place",
+    "description": "George shaved Oscar's head and turned him in as George Bluth. No record gives the date.",
+    "place": "orange-county-prison",
+    "participants": [{ "person": "oscar" }, { "person": "george-sr", "role": "other" }]
+  },
+  {
+    "slug": "oscar-vietnam",
+    "kind": "military",
+    "title": "Oscar serves in Vietnam",
+    "description": "He was a \"croc spotter\" on a swift boat, and met Lucille there through the USO. No record gives the years.",
+    "participants": [{ "person": "oscar" }]
+  },
+  {
+    "slug": "george-michael-maeby-married",
+    "kind": "marriage",
+    "title": "George Michael and Maeby marry by accident",
+    "description": "They took part in what they believed was a pretend wedding for elderly hospital patients. The priest was real and the marriage was official.",
+    "date": "2006",
+    "participants": [{ "person": "george-michael" }, { "person": "maeby" }]
+  },
+  {
+    "slug": "lindsay-learns-adoption",
+    "kind": "other",
+    "title": "Lindsay learns she was adopted",
+    "description": "She also learned that she is three years older than she had believed.",
+    "date": "2006",
+    "participants": [{ "person": "lindsay" }]
+  },
+  {
+    "slug": "george-sr-moves-out",
+    "kind": "move",
+    "title": "George Sr. moves out of the penthouse",
+    "description": "Under the guise of a divorce from Lucille. The divorce was not real.",
+    "place": "balboa-towers",
+    "date": { "value": "2006", "display": "Spring 2006" },
+    "participants": [{ "person": "george-sr" }]
+  },
+  {
+    "slug": "queen-mary-sinks",
+    "kind": "other",
+    "title": "Lucille takes the Queen Mary out to sea",
+    "description": "During the party for George's exoneration. The ship capsized, and Lucille was arrested for sinking it.",
+    "place": "queen-mary",
+    "date": "2006",
+    "participants": [{ "person": "lucille" }]
+  },
+  {
+    "slug": "fakeblock",
+    "kind": "work",
+    "title": "George Michael presents Fakeblock",
+    "description": "A wood-block sound app that rumour turned into privacy software. He presented it as George Maharis.",
+    "date": "2012",
+    "participants": [{ "person": "george-michael" }]
+  },
+  {
+    "slug": "lindsay-congress",
+    "kind": "work",
+    "title": "Lindsay runs for Congress",
+    "description": "On the Republican ticket, after the support for a speech she gave in Herbert Love's absence. Sally Sitwell took over the other side of the race from Lucille Austero.",
+    "date": "2012",
+    "participants": [{ "person": "lindsay" }]
+  },
+  {
+    "slug": "lucille-austero-died",
+    "kind": "death",
+    "title": "Lucille Austero dies at Cinco de Cuatro",
+    "description": "She went missing during the festival and was at first only presumed dead. Her body was found later, and Buster admitted to pushing her down the stairs.",
+    "date": "2012-05-04",
+    "participants": [{ "person": "lucille-austero" }, { "person": "buster", "role": "other" }]
+  }
+]

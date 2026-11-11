@@ -1,0 +1,103 @@
+[
+  { "type": "parent", "from": "george-sr", "to": "gob", "qualifier": "biological" },
+  { "type": "parent", "from": "lucille", "to": "gob", "qualifier": "biological" },
+  { "type": "parent", "from": "george-sr", "to": "michael", "qualifier": "biological" },
+  { "type": "parent", "from": "lucille", "to": "michael", "qualifier": "biological" },
+  {
+    "type": "parent",
+    "from": "george-sr",
+    "to": "lindsay",
+    "qualifier": "adoptive",
+    "note": "Adopted at the age of three."
+  },
+  {
+    "type": "parent",
+    "from": "lucille",
+    "to": "lindsay",
+    "qualifier": "adoptive",
+    "note": "Adopted at the age of three. Lucille is also Lindsay's half-sister."
+  },
+  { "type": "parent", "from": "mimi", "to": "lindsay", "qualifier": "biological" },
+  {
+    "type": "parent",
+    "from": "mimi",
+    "to": "lucille",
+    "qualifier": "biological",
+    "note": "Deduced: Lindsay is called Lucille's half-sister through Mimi."
+  },
+  { "type": "parent", "from": "lucille", "to": "buster", "qualifier": "biological" },
+  {
+    "type": "parent",
+    "from": "george-sr",
+    "to": "buster",
+    "qualifier": "legal",
+    "note": "Raised Buster as his son."
+  },
+  {
+    "type": "parent",
+    "from": "oscar",
+    "to": "buster",
+    "qualifier": "biological",
+    "note": "Described as the likely father; from his affair with Lucille."
+  },
+  { "type": "parent", "from": "george-sr", "to": "annyong", "qualifier": "adoptive" },
+  { "type": "parent", "from": "lucille", "to": "annyong", "qualifier": "adoptive" },
+  { "type": "parent", "from": "michael", "to": "george-michael", "qualifier": "biological" },
+  { "type": "parent", "from": "tracey", "to": "george-michael", "qualifier": "biological" },
+  { "type": "parent", "from": "lindsay", "to": "maeby", "qualifier": "biological" },
+  { "type": "parent", "from": "tobias", "to": "maeby", "qualifier": "biological" },
+  { "type": "parent", "from": "gob", "to": "steve-holt", "qualifier": "biological" },
+  { "type": "parent", "from": "eve-holt", "to": "steve-holt", "qualifier": "biological" },
+  {
+    "type": "partner",
+    "from": "george-sr",
+    "to": "lucille",
+    "qualifier": "married",
+    "note": "A divorce was staged in 2006; in 2012 they committed to a real one, but none is recorded."
+  },
+  {
+    "type": "partner",
+    "from": "michael",
+    "to": "tracey",
+    "qualifier": "married",
+    "endReason": "death"
+  },
+  {
+    "type": "partner",
+    "from": "tobias",
+    "to": "lindsay",
+    "qualifier": "married",
+    "note": "Tried an open marriage in 2004 and separated around 2012, then reunited."
+  },
+  {
+    "type": "partner",
+    "from": "george-michael",
+    "to": "maeby",
+    "qualifier": "married",
+    "note": "Married by accident in 2006 in what they believed was a pretend ceremony."
+  },
+  {
+    "type": "partner",
+    "from": "oscar",
+    "to": "lucille",
+    "qualifier": "partnered",
+    "endReason": "separation",
+    "note": "Together before she married George; later an affair."
+  },
+  {
+    "type": "partner",
+    "from": "gob",
+    "to": "eve-holt",
+    "qualifier": "partnered",
+    "endReason": "separation",
+    "note": "A brief fling in high school."
+  },
+  {
+    "type": "partner",
+    "from": "buster",
+    "to": "lucille-austero",
+    "qualifier": "partnered",
+    "endReason": "death",
+    "note": "On and off."
+  }
+]
