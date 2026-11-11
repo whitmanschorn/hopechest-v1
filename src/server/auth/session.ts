@@ -1,8 +1,8 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getChestConfig } from "@/lib/chest";
-import { assertCan, type Actor, type Permission } from "@/server/actor";
+import { can, type Actor, type Permission } from "@/server/actor";
 import { userForSession } from "./service";
 
 export const SESSION_COOKIE = "hopechest_session";
@@ -42,10 +42,24 @@ export async function requireUser() {
   return user;
 }
 
-/** The Actor to hand to service functions on behalf of the signed-in user. */
+/**
+ * The Actor to hand to service functions on behalf of the signed-in user.
+ * Someone without the permission gets the not-found page: to them the page
+ * does not exist. (Services still check for themselves with assertCan.)
+ */
 export async function requireActor(permission: Permission = "read"): Promise<Actor> {
   const user = await requireUser();
   const actor: Actor = { kind: "user", userId: user.id, role: user.role, personId: user.personId };
-  assertCan(actor, permission);
+  if (!can(actor, permission)) notFound();
   return actor;
+}
+
+/**
+ * The signed-in user's Actor, or null. For route handlers, which answer 401
+ * themselves instead of redirecting to the sign-in page.
+ */
+export async function currentActor(): Promise<Actor | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  return { kind: "user", userId: user.id, role: user.role, personId: user.personId };
 }
