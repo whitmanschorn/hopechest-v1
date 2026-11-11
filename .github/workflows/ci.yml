@@ -36,6 +36,8 @@ jobs:
     timeout-minutes: 20
     env:
       HOPECHEST_ENV: preview
+      # A reserved-for-fiction number; specs sign in as this admin.
+      ADMIN_PHONES: "+12025550101"
     services:
       # Used when no Neon branch is available: pushes to main, pull requests
       # from forks, and before the staging Neon project is connected.

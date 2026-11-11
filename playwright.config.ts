@@ -11,7 +11,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: isCI,
+  // One retry in CI records a trace of the failure; a test that only passes on
+  // retry still fails the run, so flakiness gets fixed rather than hidden.
   retries: isCI ? 1 : 0,
+  failOnFlakyTests: isCI,
   reporter: isCI ? [["github"], ["html", { open: "never" }]] : "list",
   use: { baseURL, trace: "on-first-retry", testIdAttribute: "data-testid" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

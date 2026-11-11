@@ -54,6 +54,21 @@ before writing a migration. Get a client with `getDb()` from `src/lib/db.ts`. Fa
 dates use the `date*` column group through `src/lib/fuzzyDate.ts`; never store a date as display
 text alone.
 
+## Auth and permissions
+
+- Sign-in is by texted code only (`src/server/auth/`). Only members, invitees and `ADMIN_PHONES`
+  can get a code.
+- 555-01xx numbers (and `TEST_PHONE_ALLOWLIST`) are test numbers: outside production their codes
+  appear on screen instead of being texted. Specs sign in with them; `(202) 555-0101` is the admin.
+  Production always uses Twilio and never shows a code.
+- Pages under `src/app/(app)/` need a session. Read it with `requireUser()` / `requireActor()`
+  from `src/server/auth/session.ts`, inside a `<Suspense>` boundary (the `(app)` layout provides
+  one).
+- Every service function takes an `Actor` and starts with `assertCan(actor, permission)`
+  (`src/server/actor.ts`). Never check roles in components or actions instead.
+- Server components cannot pass `component={Link}` to Mantine; use
+  `src/components/LinkButton.tsx`.
+
 ## Working in parallel
 
 One work item = one git worktree = one branch = one pull request. Branch from the latest `main`.

@@ -1,4 +1,5 @@
-import { Container, Stack, Text, Title } from "@mantine/core";
+import { Container, Group, Stack, Text, Title } from "@mantine/core";
+import { LinkButton } from "@/components/LinkButton";
 import { getChestConfig } from "@/lib/chest";
 
 export default function WelcomePage() {
@@ -16,6 +17,11 @@ export default function WelcomePage() {
           Your family&apos;s living archive: photos, documents, and stories, kept safe and
           rediscoverable.
         </Text>
+        <Group>
+          <LinkButton href="/login" data-testid="sign-in-link">
+            Sign in
+          </LinkButton>
+        </Group>
       </Stack>
     </Container>
   );
