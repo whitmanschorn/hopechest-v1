@@ -6,10 +6,31 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_GUESSES = 5;
 
 /**
- * Stand-in for test numbers outside production: the code is stored hashed and
- * handed back to be shown on screen. `routeFor` decides who gets this provider.
+ * Stand-in for test numbers outside production. By default the code is stored
+ * hashed and handed back to be shown on screen; with TEST_LOGIN_CODE set, a
+ * fixed secret code is used instead. `routeFor` decides who gets this provider.
  */
-export const devProvider: SmsProvider = {
+export function devProvider(testLoginCode: string | null): SmsProvider {
+  return testLoginCode ? fixedCodeProvider(testLoginCode) : onScreenProvider;
+}
+
+/** Test numbers share one secret code; nothing is generated, stored or shown. */
+function fixedCodeProvider(secret: string): SmsProvider {
+  return {
+    name: "dev",
+    async startVerification() {
+      return {};
+    },
+    async checkVerification(_phone, code) {
+      return hashesMatch(hashToken(code), hashToken(secret));
+    },
+    async sendMessage(_phone, body) {
+      return { devBody: body };
+    },
+  };
+}
+
+const onScreenProvider: SmsProvider = {
   name: "dev",
   async startVerification(phone) {
     const code = randomCode();

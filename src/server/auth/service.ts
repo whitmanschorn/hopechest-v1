@@ -3,7 +3,7 @@ import { allows, LIMITS, type Limit } from "@/lib/auth/rateLimit";
 import { hashToken, randomToken } from "@/lib/auth/tokens";
 import { getDb } from "@/lib/db";
 import { getSmsSettings, smsProviderFor } from "@/server/sms";
-import { isTestPhone } from "@/server/sms/provider";
+import { isTestPhone, type SmsSettings } from "@/server/sms/provider";
 
 export const SESSION_DAYS = 30;
 
@@ -24,6 +24,14 @@ async function takeAttempt(key: string, limit: Limit): Promise<boolean> {
     return false;
   await db.authAttempt.create({ data: { key } });
   return true;
+}
+
+/**
+ * Test numbers with on-screen codes skip limits so specs can run repeatedly.
+ * With a secret fixed code the limits stay on, or the code could be guessed.
+ */
+function skipsLimits(settings: SmsSettings, phone: string): boolean {
+  return isTestPhone(settings, phone) && !settings.testLoginCode;
 }
 
 function adminPhones(): string[] {
@@ -57,8 +65,7 @@ export async function requestCode(phone: string, ip: string | null): Promise<Req
   const provider = smsProviderFor(phone, settings);
   if (!provider) return { ok: false, reason: "unavailable" };
 
-  // Test numbers skip limits so specs can run repeatedly; they never exist in production.
-  if (!isTestPhone(settings, phone)) {
+  if (!skipsLimits(settings, phone)) {
     const allowed =
       (await takeAttempt(`code:${phone}`, LIMITS.codePerPhone)) &&
       (ip === null || (await takeAttempt(`ip:${ip}`, LIMITS.codePerIp)));
@@ -84,7 +91,7 @@ export async function verifyCode(
   if (!provider || !/^\d{4,8}$/.test(code)) return { ok: false, reason: "wrong_code" };
 
   if (
-    !isTestPhone(settings, phone) &&
+    !skipsLimits(settings, phone) &&
     !(await takeAttempt(`verify:${phone}`, LIMITS.verifyPerPhone))
   ) {
     return { ok: false, reason: "rate_limited" };
@@ -120,7 +127,8 @@ async function findOrCreateUser(phone: string) {
   if (!invite && !isAdmin) return null;
 
   try {
-    return db.$transaction(async (tx) => {
+    // `await` matters: without it a failure skips the catch below.
+    return await db.$transaction(async (tx) => {
       // Someone may already hold the invited person's account under an older number.
       const personTaken = invite
         ? await tx.user.findUnique({ where: { personId: invite.personId }, select: { id: true } })

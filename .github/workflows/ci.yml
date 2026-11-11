@@ -37,7 +37,9 @@ jobs:
     env:
       HOPECHEST_ENV: preview
       # A reserved-for-fiction number; specs sign in as this admin.
-      ADMIN_PHONES: "+12025550101"
+      ADMIN_PHONES: "+12025550101,+12025550102"
+      # Has no account until the first-sign-in spec creates it.
+      E2E_FRESH_ADMIN_PHONE: "+12025550102"
     services:
       # Used when no Neon branch is available: pushes to main, pull requests
       # from forks, and before the staging Neon project is connected.
