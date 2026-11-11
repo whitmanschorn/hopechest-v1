@@ -2,7 +2,7 @@
 // seed. Usage: node scripts/db-reset.ts
 import { execFileSync } from "node:child_process";
 import { config as loadEnv } from "dotenv";
-import { databaseHost, isLocalDatabase } from "./lib/localDb.ts";
+import { databaseHost, isLocalDatabase } from "../src/lib/localDb.ts";
 
 loadEnv({ path: ".env.local", quiet: true });
 

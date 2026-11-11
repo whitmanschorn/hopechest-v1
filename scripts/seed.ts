@@ -58,6 +58,7 @@ const data: SeedData = {
           parseSeedDocument(name.replace(/\.md$/, ""), readFileSync(join(docsDir, name), "utf8")),
         )
     : [],
+  users: existsSync(join(dir, "users.json")) ? readJson("users.json") : [],
 };
 
 const problems = validateSeed(data);
@@ -198,6 +199,19 @@ try {
       else {
         await tx.source.create({ data: { kind: "EXTERNAL", documentId: row.id, ...sourceFields } });
       }
+    });
+  }
+
+  // Test accounts, so specs can sign in as a known family member.
+  for (const user of data.users ?? []) {
+    const fields = {
+      role: upper(user.role),
+      personId: user.person ? personId(user.person) : null,
+    };
+    await db.user.upsert({
+      where: { phone: user.phone },
+      create: { phone: user.phone, ...fields, onboardedAt: new Date() },
+      update: fields,
     });
   }
 

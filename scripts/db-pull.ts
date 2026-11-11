@@ -6,7 +6,7 @@
 // Uses the pg_dump and psql inside the local Postgres container.
 import { execFileSync } from "node:child_process";
 import { config as loadEnv } from "dotenv";
-import { databaseHost, isLocalDatabase } from "./lib/localDb.ts";
+import { databaseHost, isLocalDatabase } from "../src/lib/localDb.ts";
 
 loadEnv({ path: [".env.local", ".env.staging.local"], quiet: true });
 

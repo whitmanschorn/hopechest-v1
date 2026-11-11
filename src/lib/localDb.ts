@@ -1,5 +1,6 @@
-// Guards for commands that erase a database: they may only ever point at the
-// developer's own machine.
+// Guards for anything that writes freely or erases: development, specs and the
+// reset and pull commands may only ever reach a database on this machine.
+// No imports, so scripts can load it with plain node.
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 

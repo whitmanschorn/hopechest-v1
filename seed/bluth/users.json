@@ -1,0 +1,5 @@
+[
+  { "phone": "+12025550101", "role": "admin", "person": "michael" },
+  { "phone": "+12025550104", "role": "contributor", "person": "george-michael" },
+  { "phone": "+12025550105", "role": "viewer", "person": "maeby" }
+]

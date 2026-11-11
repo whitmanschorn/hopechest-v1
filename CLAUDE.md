@@ -62,6 +62,11 @@ work, CI and staging. Specs may rely on it being present and may add rows, but m
 delete seeded rows. Changing a seeded fact means editing the seed file and noting why in
 `seed/bluth/CORRECTIONS.md`.
 
+Vercel CLI commands that pull settings (`vercel env pull`, `vercel blob create-store`, `vercel
+link`) overwrite `.env.local` with the hosted database's address. Check it afterwards and restore
+it from `.env.example`. The app refuses to start in development against a database that is not
+local.
+
 `npm run db:reset` erases data, so Prisma refuses it from an agent without the owner's say-so.
 Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing anything.
 
@@ -78,7 +83,7 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Every service function takes an `Actor` and starts with `assertCan(actor, permission)`
   (`src/server/actor.ts`). Never check roles in components or actions instead.
 - Server components cannot pass `component={Link}` to Mantine; use
-  `src/components/LinkButton.tsx`.
+  `src/components/LinkButton.tsx` or `src/components/TextLink.tsx`.
 
 ## UI
 
@@ -87,6 +92,11 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Colours come from the theme (`src/theme.ts`): use Mantine props and variables
   (`c="dimmed"`, `var(--hc-surface)`, `var(--hc-hairline)`), not hex values, so dark mode works.
 - Specs sign in with `signIn(page)` from `e2e/support/auth.ts`.
+- After a navigation Next keeps the previous page in the document, hidden. In specs that move
+  between pages, select with `shown(page, testId)` from `e2e/support/page.ts`, not
+  `page.getByTestId()`, or the old page can match too.
+- `notFound()` on a signed-in page shows the not-found page but the status is 200, because the
+  response has already started streaming. Specs assert on the page, not the status.
 
 ## Deploying
 

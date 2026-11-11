@@ -2,8 +2,12 @@ import { expect, type Page } from "@playwright/test";
 
 /** Test numbers (555-01xx). Their codes are shown on screen outside production. */
 export const PHONES = {
-  /** Listed in ADMIN_PHONES for CI and local development. */
+  /** Listed in ADMIN_PHONES; Michael in the Bluth seed. */
   admin: "(202) 555-0101",
+  /** George Michael in the Bluth seed; can add and edit. */
+  contributor: "(202) 555-0104",
+  /** Maeby in the Bluth seed; can only read. */
+  viewer: "(202) 555-0105",
   /** Not a member of any chest. */
   stranger: "(202) 555-0199",
 } as const;

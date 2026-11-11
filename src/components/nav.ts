@@ -1,4 +1,4 @@
-import { IconHome, type Icon } from "@tabler/icons-react";
+import { IconHome, IconUsers, type Icon } from "@tabler/icons-react";
 import type { Permission } from "@/server/actor";
 
 export interface NavItem {
@@ -13,4 +13,7 @@ export interface NavItem {
  * The main navigation. A feature adds its entry here in the same pull request
  * that adds its page, so the menu never links to something that isn't built.
  */
-export const NAV: readonly NavItem[] = [{ href: "/home", label: "Home", icon: IconHome }];
+export const NAV: readonly NavItem[] = [
+  { href: "/home", label: "Home", icon: IconHome },
+  { href: "/people", label: "People", icon: IconUsers },
+];

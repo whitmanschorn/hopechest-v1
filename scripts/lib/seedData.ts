@@ -82,12 +82,21 @@ export interface SeedDocument {
   text: string;
 }
 
+/** A test account. Its phone must be a fictional 555-01xx number. */
+export interface SeedUser {
+  phone: string;
+  role: "admin" | "contributor" | "viewer";
+  /** The person this account belongs to. */
+  person?: string;
+}
+
 export interface SeedData {
   people: SeedPerson[];
   relationships: SeedRelationship[];
   places: SeedPlace[];
   events: SeedEvent[];
   documents: SeedDocument[];
+  users?: SeedUser[];
 }
 
 export function resolveDate(date: SeedDate | undefined): FuzzyDate | null {
@@ -247,6 +256,26 @@ export function validateSeed(data: SeedData): string[] {
   for (const url of duplicates(data.documents.map((d) => d.sourceUrl))) {
     problems.push(`two documents share the source ${url}`);
   }
+
+  const owners: string[] = [];
+  for (const user of data.users ?? []) {
+    // This repository is public: only numbers reserved for fiction may appear.
+    if (!/^\+1\d{3}55501\d{2}$/.test(user.phone)) {
+      problems.push(`user "${user.phone}": seed accounts must use a fictional 555-01xx number`);
+    }
+    if (!["admin", "contributor", "viewer"].includes(user.role)) {
+      problems.push(`user "${user.phone}": unknown role "${user.role}"`);
+    }
+    if (user.person) {
+      if (!people.has(user.person))
+        problems.push(`user "${user.phone}": no person "${user.person}"`);
+      owners.push(user.person);
+    }
+  }
+  for (const phone of duplicates((data.users ?? []).map((user) => user.phone))) {
+    problems.push(`user "${phone}" is listed twice`);
+  }
+  for (const slug of duplicates(owners)) problems.push(`two users claim the person "${slug}"`);
 
   return problems;
 }
