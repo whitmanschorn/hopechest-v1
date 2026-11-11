@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { IconHistory, IconPencil } from "@tabler/icons-react";
+import { IconCalendarPlus, IconHistory, IconPencil } from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
@@ -194,8 +194,9 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
           )}
         </Section>
 
-        {person.events.length > 0 && (
+        {(person.events.length > 0 || canWrite) && (
           <Section title="Life events" testId="person-events">
+            {person.events.length === 0 && <Text c="dimmed">No events recorded yet.</Text>}
             <Stack gap="sm">
               {person.events.map((event) => (
                 <Paper
@@ -207,7 +208,14 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                   data-testid="person-event"
                 >
                   <Group justify="space-between" gap="xs" align="baseline">
-                    <Text fw={600}>{event.title}</Text>
+                    <TextLink
+                      href={`/events/${event.id}`}
+                      fw={600}
+                      c="inherit"
+                      data-testid="person-event-link"
+                    >
+                      {event.title}
+                    </TextLink>
                     <Text c="dimmed" fz="sm">
                       {[event.date ? describe(event.date) : "Date not recorded", event.place]
                         .filter(Boolean)
@@ -236,6 +244,18 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 </Paper>
               ))}
             </Stack>
+            {canWrite && (
+              <div>
+                <LinkButton
+                  href={`/events/new?person=${person.slug}`}
+                  variant="default"
+                  leftSection={<IconCalendarPlus size={16} />}
+                  data-testid="add-event"
+                >
+                  Add an event
+                </LinkButton>
+              </div>
+            )}
           </Section>
         )}
       </Stack>

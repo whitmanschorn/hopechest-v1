@@ -1,4 +1,12 @@
-import { IconHome, IconPhoto, IconUsers, type Icon } from "@tabler/icons-react";
+import {
+  IconHome,
+  IconMap,
+  IconMapPin,
+  IconPhoto,
+  IconTimeline,
+  IconUsers,
+  type Icon,
+} from "@tabler/icons-react";
 import type { Permission } from "@/server/actor";
 
 export interface NavItem {
@@ -17,4 +25,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/home", label: "Home", icon: IconHome },
   { href: "/people", label: "People", icon: IconUsers },
   { href: "/photos", label: "Photos", icon: IconPhoto },
+  { href: "/timeline", label: "Timeline", icon: IconTimeline },
+  { href: "/places", label: "Places", icon: IconMapPin },
+  { href: "/map", label: "Map", icon: IconMap },
 ];

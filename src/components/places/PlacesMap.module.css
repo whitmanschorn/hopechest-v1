@@ -1,0 +1,67 @@
+.frame {
+  height: min(60vh, 520px);
+  min-height: 320px;
+  border: 1px solid var(--hc-hairline);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--hc-surface);
+  overflow: hidden;
+  /* Keeps Leaflet's stacking (its panes go up to z-index 1000) under the app's menus. */
+  isolation: isolate;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  font-family: inherit;
+}
+
+/* Leaflet positions this element; the visible pin is the shape inside it. */
+.pin {
+  background: none;
+  border: none;
+}
+
+.pinShape {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--mantine-color-white);
+  border-radius: 50% 50% 50% 0;
+  background-color: var(--mantine-primary-color-filled);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
+  transform: rotate(-45deg);
+}
+
+.pin:focus-visible {
+  outline: none;
+}
+
+.pin:focus-visible .pinShape {
+  outline: 3px solid var(--mantine-color-text);
+  outline-offset: 2px;
+}
+
+.map :global(.leaflet-popup-content-wrapper),
+.map :global(.leaflet-popup-tip) {
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+}
+
+.map :global(.leaflet-popup-content) {
+  margin: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.map :global(a.leaflet-popup-close-button) {
+  color: var(--mantine-color-dimmed);
+}
+
+.map a.popupLink {
+  color: var(--mantine-color-anchor);
+  font-weight: 600;
+}
+
+.popupDetail {
+  margin-top: 2px;
+  color: var(--mantine-color-dimmed);
+}
