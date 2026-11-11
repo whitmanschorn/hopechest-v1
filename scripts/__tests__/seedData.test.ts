@@ -226,6 +226,13 @@ describe.each(readdirSync("seed").filter((name) => existsSync(join("seed", name,
       expect(validateSeed(data)).toEqual([]);
     });
 
+    it("has the picture for every document that names one", () => {
+      for (const doc of data.documents) {
+        if (doc.scan)
+          expect([doc.scan, existsSync(join(dir, "files", doc.scan))]).toEqual([doc.scan, true]);
+      }
+    });
+
     it("has questions that point at people in the seed", () => {
       const people = new Set(data.people.map((person) => person.slug));
       const lines = readFileSync(join(dir, "questions.jsonl"), "utf8").split("\n").filter(Boolean);

@@ -4,6 +4,7 @@ import { Anchor, Badge, Container, Group, Paper, Stack, Text, Title } from "@man
 import { describe } from "@/lib/fuzzyDate";
 import { requireActor } from "@/server/auth/session";
 import { getDocument } from "@/server/documents/service";
+import classes from "@/components/photos/PhotoGrid.module.css";
 
 export const metadata: Metadata = { title: "Document · Hopechest" };
 
@@ -38,13 +39,55 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
             </Text>
           </Group>
         </div>
+        {doc.scanUrl && (
+          <Stack gap={6}>
+            <a
+              href={doc.scanUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={classes.frame}
+              data-testid="document-scan-link"
+            >
+              {/* Served by /api/files behind the session, so next/image's optimizer cannot fetch it. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={doc.scanUrl}
+                alt={`The original: ${doc.title}`}
+                data-testid="document-scan"
+              />
+            </a>
+            <Text c="dimmed" fz="sm">
+              The original. Select it to open it full size.
+            </Text>
+          </Stack>
+        )}
+        {doc.scanUrl && (
+          <Title order={2} fz="h3">
+            What it says
+          </Title>
+        )}
         <Paper p="lg" radius="md" withBorder bg="var(--hc-surface)">
-          <Text
-            style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-            data-testid="document-text"
-          >
-            {doc.text ?? "The text of this document has not been read yet."}
-          </Text>
+          <Stack gap="sm" data-testid="document-text" style={{ overflowWrap: "anywhere" }}>
+            {doc.text === null && (
+              <Text c="dimmed">The text of this document has not been read yet.</Text>
+            )}
+            {(doc.text ?? "")
+              .split(/\n{2,}/)
+              .filter((block) => block.trim())
+              .map((block, index) => {
+                // Section headings in the stored text are marked "## ".
+                const heading = /^#{1,6} +(.*)$/.exec(block.trim());
+                return heading ? (
+                  <Text key={index} fw={700} mt="xs">
+                    {heading[1]}
+                  </Text>
+                ) : (
+                  <Text key={index} style={{ whiteSpace: "pre-wrap" }}>
+                    {block}
+                  </Text>
+                );
+              })}
+          </Stack>
         </Paper>
         {(doc.originalUrl || (doc.citation && doc.citation !== doc.title)) && (
           <Text c="dimmed" fz="sm" data-testid="document-origin">

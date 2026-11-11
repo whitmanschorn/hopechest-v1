@@ -43,6 +43,12 @@ that depend on who is asking.
 
 ## Sources and licence
 
+A document can carry a picture of the original paper: `scan: <file name>` in its header names a
+file in `files/`. The seed stores it with the chest's private files, and the document's page shows
+it above the text. `files/marriage-license-george-lucille.jpg` was rendered from the `.html` file
+beside it with `node scripts/render-seed-scan.ts`; re-run that if the wording changes, and keep
+the `.md` text in step.
+
 `documents/marriage-license-george-lucille.md` was written for this project and is fictional;
 see `CORRECTIONS.md`. Every other file in `documents/` is a wiki article.
 

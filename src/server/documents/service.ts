@@ -9,6 +9,8 @@ export interface DocumentView {
   kind: string;
   date: FuzzyDate | null;
   text: string | null;
+  /** A picture of the original paper, when the chest holds one. */
+  scanUrl: string | null;
   /** Where it was copied from, for documents that came from outside the family. */
   originalUrl: string | null;
   /** How to cite it, with any licence it carries. */
@@ -31,6 +33,10 @@ export async function getDocument(actor: Actor, id: string): Promise<DocumentVie
     kind: doc.kind.toLowerCase(),
     date: fromColumns(doc),
     text: doc.text,
+    scanUrl:
+      doc.originalUrl?.startsWith("/api/files/") && doc.mimeType?.startsWith("image/")
+        ? doc.originalUrl
+        : null,
     originalUrl: doc.originalUrl?.startsWith("https://") ? doc.originalUrl : null,
     citation: doc.sources[0]?.citation ?? null,
   };

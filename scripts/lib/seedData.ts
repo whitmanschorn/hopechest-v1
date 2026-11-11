@@ -86,6 +86,8 @@ export interface SeedDocument {
   sourceUrl?: string;
   /** The date of the paper itself, e.g. "1965-02-13". */
   date?: string;
+  /** File name under files/ of a picture of the original paper. */
+  scan?: string;
   license: string;
   retrieved?: string;
   text: string;
@@ -263,6 +265,9 @@ export function validateSeed(data: SeedData): string[] {
     if (doc.kind === "article" && !/^https:\/\//.test(doc.sourceUrl ?? "")) {
       problems.push(`${name}: no source_url`);
     }
+    if (doc.scan !== undefined && !/^[a-z0-9-]+\.(jpg|png)$/.test(doc.scan)) {
+      problems.push(`${name}: scan must be a .jpg or .png file name`);
+    }
     if (doc.date !== undefined && resolveDate(doc.date)?.year === undefined) {
       problems.push(`${name}: date has no year`);
     }
@@ -326,6 +331,7 @@ export function parseSeedDocument(slug: string, file: string): SeedDocument {
       : "article",
     ...(header.source_url ? { sourceUrl: header.source_url } : {}),
     ...(header.date ? { date: header.date } : {}),
+    ...(header.scan ? { scan: header.scan } : {}),
     license: header.license ?? "",
     ...(header.retrieved ? { retrieved: header.retrieved } : {}),
     text: (match ? match[2] : file).trim(),

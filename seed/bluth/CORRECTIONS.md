@@ -80,7 +80,7 @@ No article supports these, so they are gone or reduced to what is supported:
 
 ## Invented for testing
 
-One document is not from the wiki. `documents/marriage-license-george-lucille.md` is a fictional
+One document, with its scanned-looking picture in `files/`, is not from the wiki. `documents/marriage-license-george-lucille.md` is a fictional
 Orange County marriage licence and certificate, written so that "when did grandma and grandpa get
 married?" has a family paper as its source of truth, the way a real chest would. It fixes the
 wedding at Newport Beach on February 13, 1965, with Oscar as a witness. Nothing in the series or

@@ -2,6 +2,7 @@
 title: Marriage licence and certificate of George Bluth and Lucille Jenkins, 1965
 kind: record
 date: 1965-02-13
+scan: marriage-license-george-lucille.jpg
 license: "Written for this project as test data. Fictional, and not taken from the series or the wiki."
 ---
 

@@ -38,6 +38,14 @@ test("grandma and grandpa's wedding date comes from their marriage licence @smok
   await expect(shown(page, "document-title")).toContainText("Marriage licence and certificate");
   await expect(shown(page, "document-kind")).toHaveText("Record");
   await expect(shown(page, "document-date")).toHaveText("February 13, 1965");
+  // The original paper can be looked at, not only read as text.
+  const scan = shown(page, "document-scan");
+  await expect(scan).toHaveJSProperty("complete", true);
+  expect(await scan.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1700);
+  await expect(shown(page, "document-scan-link")).toHaveAttribute(
+    "href",
+    /^\/api\/files\/documents\//,
+  );
   const text = shown(page, "document-text");
   await expect(text).toContainText("GEORGE OSCAR BLUTH");
   await expect(text).toContainText("LUCILLE JENKINS");
