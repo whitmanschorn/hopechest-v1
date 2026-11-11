@@ -119,26 +119,33 @@ async function findOrCreateUser(phone: string) {
   const isAdmin = adminPhones().includes(phone);
   if (!invite && !isAdmin) return null;
 
-  return db.$transaction(async (tx) => {
-    // Someone may already hold the invited person's account under an older number.
-    const personTaken = invite
-      ? await tx.user.findUnique({ where: { personId: invite.personId }, select: { id: true } })
-      : null;
-    const user = await tx.user.create({
-      data: {
-        phone,
-        role: isAdmin ? "ADMIN" : invite!.role,
-        personId: invite && !personTaken ? invite.personId : null,
-      },
-    });
-    if (invite) {
-      await tx.invite.update({
-        where: { id: invite.id },
-        data: { status: "ACCEPTED", acceptedAt: new Date() },
+  try {
+    return db.$transaction(async (tx) => {
+      // Someone may already hold the invited person's account under an older number.
+      const personTaken = invite
+        ? await tx.user.findUnique({ where: { personId: invite.personId }, select: { id: true } })
+        : null;
+      const user = await tx.user.create({
+        data: {
+          phone,
+          role: isAdmin ? "ADMIN" : invite!.role,
+          personId: invite && !personTaken ? invite.personId : null,
+        },
       });
-    }
-    return user;
-  });
+      if (invite) {
+        await tx.invite.update({
+          where: { id: invite.id },
+          data: { status: "ACCEPTED", acceptedAt: new Date() },
+        });
+      }
+      return user;
+    });
+  } catch (error) {
+    // Two sign-ins for the same new number at once: the other one created the account.
+    const created = await db.user.findUnique({ where: { phone } });
+    if (created && !created.disabledAt) return created;
+    throw error;
+  }
 }
 
 export async function endSession(sessionToken: string): Promise<void> {

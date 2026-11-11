@@ -20,17 +20,30 @@ export const devProvider: SmsProvider = {
   },
   async checkVerification(phone, code) {
     const db = getDb();
-    const latest = await db.verificationCode.findFirst({
-      where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: "desc" },
+    // Any live code for the number is accepted, not only the newest, so asking
+    // twice (or two specs sharing a test number) does not cancel the first code.
+    const live = await db.verificationCode.findMany({
+      where: {
+        phone,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+        attempts: { lt: MAX_GUESSES },
+      },
     });
-    if (!latest || latest.attempts >= MAX_GUESSES) return false;
-    const correct = hashesMatch(latest.codeHash, hashToken(code));
-    await db.verificationCode.update({
-      where: { id: latest.id },
-      data: correct ? { consumedAt: new Date() } : { attempts: { increment: 1 } },
+    const match = live.find((row) => hashesMatch(row.codeHash, hashToken(code)));
+    if (!match) {
+      await db.verificationCode.updateMany({
+        where: { id: { in: live.map((row) => row.id) } },
+        data: { attempts: { increment: 1 } },
+      });
+      return false;
+    }
+    // Guarded on consumedAt so the same code cannot be used twice at once.
+    const used = await db.verificationCode.updateMany({
+      where: { id: match.id, consumedAt: null },
+      data: { consumedAt: new Date() },
     });
-    return correct;
+    return used.count === 1;
   },
   async sendMessage(_phone, body) {
     return { devBody: body };
