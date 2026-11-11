@@ -314,6 +314,8 @@ model User {
   id          String    @id @default(uuid(7)) @db.Uuid
   /// E.164, e.g. +14155550123.
   phone       String    @unique
+  /// Contact information only; sign-in is by phone.
+  email       String?
   role        Role      @default(VIEWER)
   personId    String?   @unique @map("person_id") @db.Uuid
   /// Set when the person finishes the join flow (name, birthday, picture).
@@ -402,6 +404,11 @@ model Invite {
   status      InviteStatus @default(PENDING)
   /// SHA-256 of the token in the /join/<token> link.
   tokenHash   String       @unique @map("token_hash")
+  /// The token itself, so the admin can copy the same link again. Null on
+  /// invites made before links could be re-copied.
+  token       String?      @unique
+  /// Contact information only; sign-in is by phone.
+  email       String?
   invitedById String?      @map("invited_by_id") @db.Uuid
   sentAt      DateTime?    @map("sent_at") @db.Timestamptz
   acceptedAt  DateTime?    @map("accepted_at") @db.Timestamptz
