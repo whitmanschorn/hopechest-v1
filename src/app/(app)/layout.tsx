@@ -1,8 +1,9 @@
 import { Suspense, type ReactNode } from "react";
 import { Center, Loader } from "@mantine/core";
-import { signOutAction } from "@/app/login/actions";
+import { signOutAction, stopViewAsAction, viewAsAction } from "@/app/login/actions";
 import { AppFrame } from "@/components/AppFrame";
 import { maskPhone } from "@/lib/auth/phone";
+import { ROLE_WORDS } from "@/lib/auth/viewAs";
 import { getChestConfig } from "@/lib/chest";
 import { getDb } from "@/lib/db";
 import { can, type Actor, type Permission } from "@/server/actor";
@@ -36,11 +37,28 @@ async function SignedIn({ children }: { children: ReactNode }) {
       })
     : null;
   const actor: Actor = { kind: "user", userId: user.id, role: user.role, personId: user.personId };
+  // "View as" needs everyone's name for its picker; only admins outside production get it.
+  const viewAs = user.canViewAs
+    ? {
+        people: (
+          await getDb().person.findMany({
+            select: { slug: true, displayName: true },
+            orderBy: { displayName: "asc" },
+          })
+        ).map((option) => ({ value: option.slug, label: option.displayName })),
+        current: user.viewingAs
+          ? `${person?.displayName ?? "someone"} (${ROLE_WORDS[user.role]})`
+          : null,
+        start: viewAsAction,
+        stop: stopViewAsAction,
+      }
+    : undefined;
 
   return (
     <AppFrame
       chestName={getChestConfig().name}
       signOut={signOutAction}
+      viewAs={viewAs}
       user={{
         label: person?.displayName ?? maskPhone(user.phone),
         avatarUrl: person?.avatarUrl ?? null,

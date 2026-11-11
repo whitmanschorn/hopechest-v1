@@ -1,6 +1,8 @@
 import { parsePhoneList } from "@/lib/auth/phone";
 import { allows, LIMITS, type Limit } from "@/lib/auth/rateLimit";
 import { hashToken, randomToken } from "@/lib/auth/tokens";
+import { canViewAs, effectiveIdentity } from "@/lib/auth/viewAs";
+import { getChestConfig } from "@/lib/chest";
 import { getDb } from "@/lib/db";
 import { getSmsSettings, smsProviderFor } from "@/server/sms";
 import { isTestPhone, type SmsSettings } from "@/server/sms/provider";
@@ -169,12 +171,67 @@ export async function endSession(sessionToken: string): Promise<void> {
   await getDb().session.deleteMany({ where: { tokenHash: hashToken(sessionToken) } });
 }
 
-/** The signed-in user for a session cookie value, or null. */
+/**
+ * The signed-in user for a session cookie value, or null. `role` and
+ * `personId` are the ones in effect: an admin using "view as" outside
+ * production gets the chosen person's. `id` and `phone` are always the real
+ * account's, so every change is still recorded against whoever made it.
+ */
 export async function userForSession(sessionToken: string) {
   const session = await getDb().session.findUnique({
     where: { tokenHash: hashToken(sessionToken) },
     include: { user: true },
   });
   if (!session || session.expiresAt <= new Date() || session.user.disabledAt) return null;
-  return session.user;
+  const env = getChestConfig().env;
+  const effective = effectiveIdentity(session.user, session, env);
+  return {
+    ...session.user,
+    role: effective.role,
+    personId: effective.personId,
+    viewingAs: effective.viewingAs,
+    /** Whether the real account may use "view as" here. */
+    canViewAs: canViewAs(session.user, env),
+  };
+}
+
+/**
+ * Starts or (with null) stops viewing the chest as someone else, for this
+ * session only. Refused in production and for anyone but an admin.
+ */
+export async function setViewAs(
+  sessionToken: string,
+  choice: { personSlug: string; role: string } | null,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const db = getDb();
+  const session = await db.session.findUnique({
+    where: { tokenHash: hashToken(sessionToken) },
+    include: { user: true },
+  });
+  if (!session || session.expiresAt <= new Date() || session.user.disabledAt) {
+    return { ok: false, message: "Sign in again." };
+  }
+  // Checked against the real account, so someone viewing as a read-only member can still stop.
+  if (!canViewAs(session.user, getChestConfig().env)) {
+    return { ok: false, message: "This is not available here." };
+  }
+  if (!choice) {
+    await db.session.update({
+      where: { id: session.id },
+      data: { actingPersonId: null, actingRole: null },
+    });
+    return { ok: true };
+  }
+  const person = await db.person.findUnique({
+    where: { slug: choice.personSlug },
+    select: { id: true },
+  });
+  if (!person) return { ok: false, message: "Choose someone from the list." };
+  const role = (["ADMIN", "CONTRIBUTOR", "VIEWER"] as const).find((name) => name === choice.role);
+  if (!role) return { ok: false, message: "Choose an access level." };
+  await db.session.update({
+    where: { id: session.id },
+    data: { actingPersonId: person.id, actingRole: role },
+  });
+  return { ok: true };
 }

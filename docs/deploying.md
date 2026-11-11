@@ -34,7 +34,12 @@ In its Vercel project (production environment):
 ## Signing in on staging
 
 Staging's address is public, so it never shows codes on screen. Test numbers such as
-(202) 555-0101 (an admin) sign in with the six-digit `TEST_LOGIN_CODE` instead. To run specs
+(202) 555-0101 (an admin) sign in with the six-digit `TEST_LOGIN_CODE` instead. The same code works for (202) 555-0104 (George Michael, can add and edit) and (202) 555-0105
+(Maeby, read-only). Signed in as the admin, "View as someone else" in the account menu shows the
+chest as any family member, with a chosen level of access; a banner offers the way back. The
+family sites do not have it.
+
+To run specs
 against staging:
 
 ```sh

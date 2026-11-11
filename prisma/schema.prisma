@@ -69,6 +69,7 @@ model Person {
   photoTags         PhotoPerson[]
   faces             Face[]
   invites           Invite[]
+  actingSessions    Session[]          @relation("SessionActingPerson")
 
   @@map("people")
 }
@@ -339,15 +340,21 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(uuid(7)) @db.Uuid
+  id             String   @id @default(uuid(7)) @db.Uuid
   /// SHA-256 of the cookie value; the raw token is never stored.
-  tokenHash String   @unique @map("token_hash")
-  userId    String   @map("user_id") @db.Uuid
-  userAgent String?  @map("user_agent")
-  expiresAt DateTime @map("expires_at") @db.Timestamptz
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  tokenHash      String   @unique @map("token_hash")
+  userId         String   @map("user_id") @db.Uuid
+  userAgent      String?  @map("user_agent")
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// "View as": the person an admin is looking at the chest as. Never
+  /// honoured in production; see src/lib/auth/viewAs.ts.
+  actingPersonId String?  @map("acting_person_id") @db.Uuid
+  /// The access level to use while viewing as that person.
+  actingRole     Role?    @map("acting_role")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actingPerson Person? @relation("SessionActingPerson", fields: [actingPersonId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([expiresAt])

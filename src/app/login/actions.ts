@@ -1,9 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { normalizePhone } from "@/lib/auth/phone";
-import { endSession, requestCode, verifyCode } from "@/server/auth/service";
+import { endSession, requestCode, setViewAs, verifyCode } from "@/server/auth/service";
 import { clearSessionCookie, readSessionCookie, setSessionCookie } from "@/server/auth/session";
 
 export type LoginState =
@@ -45,4 +46,25 @@ export async function signOutAction(): Promise<void> {
   if (token) await endSession(token);
   await clearSessionCookie();
   redirect("/");
+}
+
+/** "View as": look at the chest as another family member. Admins, outside production. */
+export async function viewAsAction(form: FormData): Promise<void> {
+  const token = await readSessionCookie();
+  if (!token) redirect("/login");
+  const person = String(form.get("person") ?? "");
+  await setViewAs(
+    token,
+    person ? { personSlug: person, role: String(form.get("role") ?? "") } : null,
+  );
+  // The frame around every page (name, menu, banner) depends on who you count as.
+  revalidatePath("/", "layout");
+  redirect("/home");
+}
+
+export async function stopViewAsAction(): Promise<void> {
+  const token = await readSessionCookie();
+  if (token) await setViewAs(token, null);
+  revalidatePath("/", "layout");
+  redirect("/home");
 }
