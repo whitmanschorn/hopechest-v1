@@ -2,6 +2,9 @@
   "name": "hopechest",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "hopechest": "cli/hopechest.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,6 +16,7 @@
     "test:e2e": "playwright test",
     "test:smoke": "playwright test --grep @smoke",
     "pr-size": "node scripts/pr-size.ts",
+    "hopechest": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON cli/hopechest.ts",
     "verify": "npm run lint && npm run typecheck && npm test && npm run test:smoke",
     "postinstall": "prisma generate",
     "db:up": "docker start hopechest-pg 2>/dev/null || docker run -d --name hopechest-pg -e POSTGRES_PASSWORD=hopechest -e POSTGRES_DB=hopechest -p 54329:5432 pgvector/pgvector:pg18",
