@@ -127,6 +127,15 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   passages Ask will cite.
 - A document that recorded facts cite cannot be deleted.
 
+## Proposed facts
+
+- Anything a model or assistant reads or works out goes through `proposeClaim`
+  (`src/server/claims/`, `docs/facts.md`), never straight into the graph. A person accepts or
+  rejects it under Review.
+- Accepting runs the action's own REST route as the reviewer and records the row it made. That
+  link is what gives an event or person its sources (`src/server/sources.ts`).
+- A new kind of proposable change is a new entry in `CLAIM_ACTIONS` naming an existing tool.
+
 ## UI
 
 - Signed-in pages render inside `src/components/AppFrame.tsx`. Add a page's menu entry to

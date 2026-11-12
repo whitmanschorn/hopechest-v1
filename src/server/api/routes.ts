@@ -12,6 +12,13 @@ import {
   updateAlbum,
 } from "@/server/albums/service";
 import {
+  acceptClaim,
+  getClaim,
+  listClaims,
+  proposeClaim,
+  rejectClaim,
+} from "@/server/claims/service";
+import {
   createDocument,
   deleteDocument,
   getDocument,
@@ -605,6 +612,72 @@ export const ROUTES: readonly ApiRoute[] = [
       if (!(await getAlbum(actor, params.id))) return missing("album");
       await deleteAlbum(actor, params.id);
       return ok({ ok: true });
+    },
+  },
+
+  // ── proposed facts ──
+  {
+    method: "GET",
+    path: "claims",
+    needs: "write",
+    summary:
+      "Proposed facts waiting for a person to decide. ?status=accepted|rejected for past ones.",
+    run: async ({ actor, query }) =>
+      ok(await listClaims(actor, { status: query.get("status") ?? undefined })),
+  },
+  {
+    method: "POST",
+    path: "claims",
+    needs: "write",
+    summary:
+      "Propose a fact for a person to accept or reject, instead of writing it straight in. Nothing changes until it is accepted.",
+    fields:
+      "statement (the fact in plain words), action (add_person|update_person|add_relationship|add_event|update_event|add_place|update_place), " +
+      "args (what that action takes), document (id of the document it was read from), quote (the words it was read from), " +
+      "confidence (0 to 1), agent (name of the model proposing)",
+    run: async ({ actor, body }) => {
+      const result = await proposeClaim(actor, {
+        statement: asText(body.statement),
+        action: asText(body.action),
+        args: body.args,
+        document: asText(body.document) || undefined,
+        quote: asText(body.quote) || undefined,
+        confidence: typeof body.confidence === "number" ? body.confidence : undefined,
+        agent: asText(body.agent) || undefined,
+      });
+      if (!result.ok) return invalid(result);
+      return ok({ claim: await getClaim(actor, result.id) }, 201);
+    },
+  },
+  {
+    method: "POST",
+    path: "claims/:id/accept",
+    needs: "write",
+    summary: "Accept a proposed fact: make the change it describes and tie it to its source.",
+    run: async ({ actor, params }) => {
+      const result = await acceptClaim(actor, params.id);
+      if (result.ok) return ok({ claim: result.claim });
+      const error =
+        result.status === 404 ? "not_found" : result.status === 409 ? "decided" : "invalid";
+      return {
+        status: result.status,
+        body: { error, message: result.message, fields: result.fields ?? {} },
+      };
+    },
+  },
+  {
+    method: "POST",
+    path: "claims/:id/reject",
+    needs: "write",
+    summary: "Reject a proposed fact. Nothing else changes.",
+    fields: "note (optional: why)",
+    run: async ({ actor, params, body }) => {
+      const result = await rejectClaim(actor, params.id, asText(body.note) || undefined);
+      if (result.ok) return ok({ claim: result.claim });
+      return {
+        status: result.status,
+        body: { error: result.status === 404 ? "not_found" : "decided", message: result.message },
+      };
     },
   },
 

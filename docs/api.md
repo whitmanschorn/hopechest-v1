@@ -24,15 +24,16 @@ Revoking a key on the Settings page stops it at once.
 That listing is generated from the route table in `src/server/api/routes.ts`, so it is never out
 of date. In short:
 
-| Area      | Routes                                                                                    |
-| --------- | ----------------------------------------------------------------------------------------- |
-| People    | list and search, get, add, change, history, add a relationship, remove a relationship     |
-| Events    | list (by kind, person or place), get with its sources, add, change, delete                |
-| Places    | list, get, add, change, delete                                                            |
-| Photos    | list (optionally one person's), get, change details, delete                               |
-| Albums    | list, get, add, change, delete                                                            |
-| Documents | list and search by words, get, add from text, change (including setting the text), delete |
-| Ingest    | start a batch, add a file to it, finish it; list, date, publish and discard for review    |
+| Area           | Routes                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| People         | list and search, get, add, change, history, add a relationship, remove a relationship     |
+| Events         | list (by kind, person or place), get with its sources, add, change, delete                |
+| Places         | list, get, add, change, delete                                                            |
+| Photos         | list (optionally one person's), get, change details, delete                               |
+| Albums         | list, get, add, change, delete                                                            |
+| Documents      | list and search by words, get, add from text, change (including setting the text), delete |
+| Ingest         | start a batch, add a file to it, finish it; list, date, publish and discard for review    |
+| Proposed facts | propose, list, accept, reject (`docs/facts.md`)                                           |
 
 Photos are uploaded in bulk through the ingest routes, which the `hopechest ingest` command drives
 (`docs/ingest.md`). Documents are added through the API as text (`docs/documents.md`); files are
