@@ -39,11 +39,19 @@ Staging's address is public, so it never shows codes on screen. Test numbers suc
 
 ## Letting someone look around staging
 
-Send them https://hopechest-staging.vercel.app/try and the demo password (`DEMO_PASSWORD`, kept
-in the staging project on Vercel and in your local `.env.staging.local`). They pick any family
-member and whether they can edit, and are signed in as that person for twelve hours or until
-they sign out. They need no phone and cannot get admin access. Changes they make show in
-histories as "A demo visitor".
+Send them one link with the demo password in it:
+
+    https://hopechest-staging.vercel.app/try?p=<the demo password>
+
+It opens straight on "Look around as". The password is `DEMO_PASSWORD`, kept in the staging
+project on Vercel and in your local `.env.staging.local`. The page removes it from the address
+bar once read, but a password sent this way does appear in the site's request logs and in the
+visitor's browser history. If that matters, send `/try#<the demo password>` instead (the part
+after `#` never leaves the browser), or plain `/try`, which asks for it.
+
+They pick any family member and whether they can edit, and are signed in as that person for
+twelve hours or until they sign out. They need no phone and cannot get admin access. Changes
+they make show in histories as "A demo visitor".
 
 The door exists only where `DEMO_PASSWORD` is set to at least 12 characters, and never on a
 family site, whatever is set there. To close it, remove the variable and redeploy; to shut out

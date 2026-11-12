@@ -48,6 +48,23 @@ test("a demo visitor who can edit leaves changes marked as a demo visitor's", as
   await expect(shown(page, "history-entry")).toContainText("A demo visitor");
 });
 
+test("a link can carry the password, and it does not stay in the address bar", async ({ page }) => {
+  await page.goto(`/try?p=${encodeURIComponent(PASSWORD)}`);
+  // Straight to choosing who to be.
+  await expect(page.getByTestId("demo-person")).toBeVisible();
+  expect(new URL(page.url()).search).toBe("");
+  await page.getByTestId("demo-person").fill("Tobias");
+  await page.getByRole("option", { name: "Tobias Fünke" }).click();
+  await page.getByTestId("demo-start").click();
+  await expect(page).toHaveURL(/\/home$/);
+
+  // A link with the wrong password lands on the ordinary form, with the reason.
+  await page.context().clearCookies();
+  await page.goto("/try?p=not-the-password-at-all");
+  await expect(page.getByTestId("demo-password-form")).toContainText("That password didn't work.");
+  await expect(page.getByTestId("demo-person")).toHaveCount(0);
+});
+
 test("the wrong password shows no names and opens nothing", async ({ page }) => {
   await page.goto("/try");
   await page.getByTestId("demo-password").fill("not-the-password-at-all");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { Button, NativeSelect, PasswordInput, Select, Stack, Text } from "@mantine/core";
 import { demoPasswordAction, demoStartAction, type TryState } from "./actions";
 
@@ -8,10 +8,26 @@ const START: TryState = { step: "password" };
 
 export function TryForm() {
   const [entered, enter, checking] = useActionState(demoPasswordAction, START);
+  const form = useRef<HTMLFormElement>(null);
+
+  // A link can carry the password: /try?p=the-password. It is used once and
+  // then removed from the address bar, so it is not left on screen or copied
+  // along by accident. ("#the-password" works too, and never reaches the server.)
+  useEffect(() => {
+    const address = new URL(window.location.href);
+    const fromLink = address.searchParams.get("p") ?? decodeURIComponent(address.hash.slice(1));
+    if (!fromLink || !form.current) return;
+    window.history.replaceState(null, "", address.pathname);
+    const field = form.current.elements.namedItem("password");
+    if (field instanceof HTMLInputElement) {
+      field.value = fromLink;
+      form.current.requestSubmit();
+    }
+  }, []);
   return entered.step === "pick" ? (
     <PickStep unlocked={entered} />
   ) : (
-    <form action={enter} data-testid="demo-password-form">
+    <form ref={form} action={enter} data-testid="demo-password-form">
       <Stack gap="md">
         <PasswordInput
           name="password"

@@ -218,9 +218,13 @@ export async function checkDemoPassword(
   const expected = demoPassword();
   if (!expected) return "closed";
   const key = `demo:${ip ?? "unknown"}`;
-  if (!(await isAllowed(key, LIMITS.demoPerIp))) return "rate_limited";
+  // On a developer's machine and in CI every request shares one address, and
+  // specs guess wrong on purpose; the limit is for sites on the internet.
+  const env = getChestConfig().env;
+  const limited = env !== "development" && env !== "preview";
+  if (limited && !(await isAllowed(key, LIMITS.demoPerIp))) return "rate_limited";
   if (!hashesMatch(hashToken(password.trim()), hashToken(expected))) {
-    await record(key);
+    if (limited) await record(key);
     return "wrong";
   }
   return "ok";
