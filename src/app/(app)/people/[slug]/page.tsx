@@ -6,6 +6,7 @@ import { IconCalendarPlus, IconCamera, IconHistory, IconPencil } from "@tabler/i
 import { LinkButton } from "@/components/LinkButton";
 import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
+import { PhotoGrid } from "@/components/photos/PhotoGrid";
 import { PersonAvatar, PersonCard } from "@/components/people/PersonCard";
 import { RemoveRelationship } from "@/components/people/RemoveRelationship";
 import { describe } from "@/lib/fuzzyDate";
@@ -17,6 +18,7 @@ import {
   type PersonRef,
   type Relative,
 } from "@/server/people/service";
+import { listPhotos } from "@/server/photos/service";
 
 export const metadata: Metadata = { title: "Person · Hopechest" };
 
@@ -56,6 +58,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const person = await getPerson(actor, slug);
   if (!person) notFound();
   const canWrite = can(actor, "write");
+  const photos = await listPhotos(actor, { person: person.slug });
   const options = canWrite
     ? (await listPersonOptions(actor)).filter((option) => option.value !== person.slug)
     : [];
@@ -205,6 +208,21 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </div>
           )}
         </Section>
+
+        {photos.total > 0 && (
+          <Section title="Photos" testId="person-photos">
+            <PhotoGrid photos={photos.photos.slice(0, 6)} />
+            <div>
+              <LinkButton
+                href={`/photos?person=${person.slug}`}
+                variant="default"
+                data-testid="person-photos-all"
+              >
+                {photos.total === 1 ? "See the photo" : `See all ${photos.total} photos`}
+              </LinkButton>
+            </div>
+          </Section>
+        )}
 
         {(person.events.length > 0 || canWrite) && (
           <Section title="Life events" testId="person-events">

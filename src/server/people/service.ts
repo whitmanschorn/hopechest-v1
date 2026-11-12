@@ -1,5 +1,4 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { maskPhone } from "@/lib/auth/phone";
 import { getDb } from "@/lib/db";
 import { fromColumns, toColumns, type FuzzyDate } from "@/lib/fuzzyDate";
 import { buildGraph, describeKin, siblingsOf, type KinGraph, type KinLink } from "@/lib/kinship";
@@ -17,6 +16,7 @@ import {
 } from "@/lib/people/personEdit";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import { assertCan, type Actor } from "@/server/actor";
+import { memberName } from "@/server/memberName";
 import { recordChanges } from "@/server/changelog";
 
 // ───────────────────────────── shapes ─────────────────────────────
@@ -687,13 +687,10 @@ export async function getPersonHistory(
       before: row.before,
       after: row.after,
       by: row.actorUser
-        ? (row.actorUser.person?.displayName ??
-          (row.actorUser.phone === "demo-visitor"
-            ? "A demo visitor"
-            : maskPhone(row.actorUser.phone)))
+        ? memberName(row.actorUser)
         : row.actorApiKey
           ? `${row.actorApiKey.name} (API key)`
-          : "Someone no longer here",
+          : memberName(null),
     })),
   };
 }

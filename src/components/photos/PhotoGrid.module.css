@@ -39,20 +39,3 @@
     transform: none;
   }
 }
-
-.frame {
-  display: flex;
-  justify-content: center;
-  border: 1px solid var(--hc-hairline);
-  border-radius: var(--mantine-radius-md);
-  background-color: var(--hc-surface);
-  overflow: hidden;
-}
-
-.frame img {
-  display: block;
-  max-width: 100%;
-  max-height: 78vh;
-  width: auto;
-  height: auto;
-}

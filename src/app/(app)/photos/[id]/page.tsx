@@ -5,12 +5,14 @@ import { IconArrowLeft, IconDownload } from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { PhotoForm } from "@/components/photos/PhotoForm";
 import { photoLabel } from "@/components/photos/PhotoGrid";
+import { PhotoStage } from "@/components/photos/PhotoStage";
+import { PhotoTalk } from "@/components/photos/PhotoTalk";
 import { TextLink } from "@/components/TextLink";
 import { describe } from "@/lib/fuzzyDate";
 import { requireActor } from "@/server/auth/session";
 import { listPersonOptions } from "@/server/people/service";
 import { getPhoto } from "@/server/photos/service";
-import classes from "@/components/photos/PhotoGrid.module.css";
+import { getPhotoTalk } from "@/server/photos/talk";
 
 export const metadata: Metadata = { title: "Photo · Hopechest" };
 
@@ -20,7 +22,10 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
   const actor = await requireActor("read");
   const photo = await getPhoto(actor, (await params).id);
   if (!photo) notFound();
-  const people = photo.canEdit ? await listPersonOptions(actor) : [];
+  const [people, talk] = await Promise.all([
+    photo.canEdit ? listPersonOptions(actor) : [],
+    getPhotoTalk(actor, photo.id),
+  ]);
 
   // What the form starts with: an exact date goes back in as typed-style text.
   const dateText = !photo.date
@@ -57,16 +62,15 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
           </LinkButton>
         </Group>
 
-        <div className={classes.frame}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photo.displayUrl}
-            alt={photoLabel(photo)}
-            width={photo.width}
-            height={photo.height}
-            data-testid="photo-image"
-          />
-        </div>
+        <PhotoStage
+          photoId={photo.id}
+          src={photo.displayUrl}
+          alt={photoLabel(photo)}
+          width={photo.width}
+          height={photo.height}
+          tags={photo.people}
+          canEdit={photo.canEdit}
+        />
 
         <Stack gap={4}>
           <Title order={1} fz="h3" data-testid="photo-caption">
@@ -95,6 +99,16 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
             {photo.originalFilename && ` · ${photo.originalFilename}`}
           </Text>
         </Stack>
+
+        <PhotoTalk
+          photoId={photo.id}
+          reactions={talk.reactions}
+          canTakePart={talk.canTakePart}
+          comments={talk.comments.map(({ at, ...comment }) => ({
+            ...comment,
+            when: DAY.format(at),
+          }))}
+        />
 
         {photo.canEdit && (
           <Paper p="md" radius="md" withBorder bg="var(--hc-surface)">

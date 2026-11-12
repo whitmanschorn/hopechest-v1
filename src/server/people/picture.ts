@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { getDb } from "@/lib/db";
 import { AVATAR_PIXELS, type StoredCrop } from "@/lib/people/avatarCrop";
+import { boxFromColumns, type Box } from "@/lib/photos/box";
 import { avatarKey, fileUrl, keyFromUrl } from "@/lib/photos/keys";
 import { assertCan, can, ForbiddenError, type Actor } from "@/server/actor";
 import { recordChanges } from "@/server/changelog";
@@ -11,6 +12,8 @@ export interface PictureChoice {
   thumbUrl: string;
   displayUrl: string;
   caption: string | null;
+  /** Where this person is in the photo, if marked: the crop starts there. */
+  box: Box | null;
 }
 
 export interface PictureSubject {
@@ -47,14 +50,23 @@ export async function getPictureSubject(
     where: { status: "PUBLISHED", people: { some: { personId: person.id } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 60,
-    select: { id: true, thumbUrl: true, displayUrl: true, caption: true },
+    select: {
+      id: true,
+      thumbUrl: true,
+      displayUrl: true,
+      caption: true,
+      people: { where: { personId: person.id } },
+    },
   });
   return {
     slug: person.slug,
     displayName: person.displayName,
     avatarUrl: person.avatarUrl,
     isYou: actor.kind === "user" && actor.personId === person.id,
-    photos,
+    photos: photos.map(({ people, ...photo }) => ({
+      ...photo,
+      box: people[0] ? boxFromColumns(people[0]) : null,
+    })),
   };
 }
 
