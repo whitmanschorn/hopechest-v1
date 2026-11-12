@@ -61,6 +61,12 @@ export default async function DocumentPage({
             )}
           </Group>
         </Group>
+        {doc.waiting && (
+          <Alert color="yellow" data-testid="document-waiting">
+            This document is waiting for review. Only people who can add things see it until it is
+            published.
+          </Alert>
+        )}
         {(await searchParams).already && (
           <Alert color="yellow" data-testid="document-already">
             This document was already in the chest, so nothing new was added.

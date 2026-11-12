@@ -70,3 +70,20 @@
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 3px;
 }
+
+.paper {
+  display: flex;
+  gap: var(--mantine-spacing-sm);
+  align-items: flex-start;
+  padding: var(--mantine-spacing-sm) 0;
+  border-bottom: 1px solid var(--hc-hairline);
+  cursor: pointer;
+}
+
+.paper input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: none;
+  accent-color: var(--mantine-primary-color-filled);
+}

@@ -81,6 +81,21 @@ describe("matchPerson", () => {
 });
 
 describe("planFolder", () => {
+  it("takes PDFs and text files as documents", () => {
+    expect(planFolder(["letters/klara-1933.pdf", "letters/klara-1933.json", "story.md"])).toEqual({
+      files: [
+        {
+          path: "letters/klara-1933.pdf",
+          contentType: "application/pdf",
+          kind: "document",
+          sidecar: "letters/klara-1933.json",
+        },
+        { path: "story.md", contentType: "text/markdown", kind: "document", sidecar: null },
+      ],
+      skipped: [],
+    });
+  });
+
   it("pairs pictures with their sidecars and reports what it cannot take", () => {
     expect(
       planFolder([
@@ -88,7 +103,7 @@ describe("planFolder", () => {
         "box-1/slide-001.jpg",
         "box-1/slide-001.json",
         "box-1/slide-002.JPG.json",
-        "box-1/notes.txt",
+        "box-1/notes.docx",
         "box-1/.DS_Store",
         ".hidden/slide.jpg",
         "movie.mov",
@@ -99,15 +114,17 @@ describe("planFolder", () => {
         {
           path: "box-1/slide-001.jpg",
           contentType: "image/jpeg",
+          kind: "photo",
           sidecar: "box-1/slide-001.json",
         },
         {
           path: "box-1/slide-002.JPG",
           contentType: "image/jpeg",
+          kind: "photo",
           sidecar: "box-1/slide-002.JPG.json",
         },
       ],
-      skipped: ["box-1/notes.txt", "movie.mov", "stray.json"],
+      skipped: ["box-1/notes.docx", "movie.mov", "stray.json"],
     });
   });
 });

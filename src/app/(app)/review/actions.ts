@@ -11,20 +11,24 @@ export interface ReviewResult {
 }
 
 const photos = (count: number) => (count === 1 ? "1 photo" : `${count} photos`);
+const things = (count: number) => (count === 1 ? "1 item" : `${count} items`);
 
 /** Publishes the photos named, or with `null` everything still waiting in the batch. */
 export async function publishAction(batchId: string, ids: string[] | null): Promise<ReviewResult> {
   const actor = await requireActor("write");
   const count = await publishPhotos(actor, batchId, ids ?? undefined);
   refresh();
-  return { ok: true, message: `Published ${photos(count)}. The family can see them now.` };
+  return {
+    ok: true,
+    message: `Published ${things(count)}. The family can see ${count === 1 ? "it" : "them"} now.`,
+  };
 }
 
 export async function discardAction(batchId: string, ids: string[]): Promise<ReviewResult> {
   const actor = await requireActor("write");
   const count = await discardPhotos(actor, batchId, ids);
   refresh();
-  return { ok: true, message: `Discarded ${photos(count)}.` };
+  return { ok: true, message: `Discarded ${things(count)}.` };
 }
 
 export async function dateAction(

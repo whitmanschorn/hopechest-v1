@@ -15,8 +15,9 @@ Then open **Review** on the website, look the batch over, and publish.
 
 ## What the command does
 
-1. Finds every picture in the folder and its sub-folders (JPEG, PNG, WebP, TIFF, GIF, up to 50 MB
-   each). Other files are listed as skipped and left alone. Hidden files are ignored.
+1. Finds every picture (JPEG, PNG, WebP, TIFF, GIF) and every document (PDF, `.txt`, `.md`) in the
+   folder and its sub-folders, up to 50 MB each. Other files are listed as skipped and left alone.
+   Hidden files are ignored.
 2. Starts a batch named by `--label` (the folder's name if not given).
 3. For each picture, works out its fingerprint (SHA-256) and asks the chest whether it already
    has that file. If so, nothing is sent. If not, the original is uploaded and the chest makes the
@@ -57,8 +58,22 @@ A picture's own details go in a JSON file beside it, named after it (`slide-001.
 }
 ```
 
-This "folder plus sidecar files" shape is the one every other source is converted to: a Facebook
-export and a browser capture will both produce it.
+A sidecar can also carry `"note"`: something for the reviewer to know, shown beside the photo.
+
+This "folder plus sidecar files" shape is the one every other source is converted to. Facebook,
+by export or by browser capture, is covered in `docs/facebook.md`.
+
+## Documents in the folder
+
+PDFs and text files come in as documents (`docs/documents.md`): their words are read and become
+searchable once published. A document's sidecar takes `title` (the file's name if not given),
+`kind` (letter, record, recipe, story, article, other) and `date`.
+
+The options on the command line (`--date`, `--album`, `--people`) describe the run's photos and
+are not applied to documents: a letter found in a box of 1974 slides was not written in 1974.
+
+A picture is a photo unless its sidecar says `"type": "document"`, which files it as a page of a
+document: the scan is kept as the original and its text waits to be typed out.
 
 People are matched on an exact name: slug, display name, given and family name, nickname or
 another recorded name. A name that matches nobody, or more than one person, is not guessed at. It
@@ -71,8 +86,9 @@ with the file replaces the camera's, because a scanner stamps the day of the sca
 
 - Each waiting photo shows its caption, date, the people tagged, and any notes about details that
   could not be applied. "Open to edit" goes to the photo's own page for anything more.
-- Pick photos (or all) to give them one date, or to discard them.
-- **Publish** shows the picked photos to the family, or all of them if none are picked.
+- Waiting documents are listed above the photos, each with a link to read it.
+- Pick photos (or all) to give them one date. Pick anything to discard it.
+- **Publish** shows what is picked to the family, or everything if nothing is picked.
 
 Until then a waiting photo is visible only to people who can add photos. It is not in Photos,
 albums, or anyone's profile.
@@ -92,4 +108,4 @@ Assistants can review too: `list_ingest_batches`, `get_ingest_batch`, `update_ph
 - `e2e/ingest.spec.ts` runs the real command on a folder, then reviews and publishes the batch in
   the browser.
 
-Not here yet: documents (PDFs, letters), HEIC pictures, Facebook exports, and face detection.
+Not here yet: HEIC pictures, Word files, and face detection.

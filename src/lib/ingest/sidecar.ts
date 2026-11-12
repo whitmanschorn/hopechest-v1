@@ -16,9 +16,30 @@ export interface Sidecar {
   album?: string;
   /** Where it was copied from, such as a Facebook post. */
   sourceUrl?: string;
+  /** Something for the reviewer to know, such as "Posted on Facebook, 3 June 2014". */
+  note?: string;
+  /** For a document: its title (the file's name if not given). */
+  title?: string;
+  /** For a document: letter, record, recipe, story, article or other. */
+  kind?: string;
+  /**
+   * "document" files a picture as a page of a document rather than a photo.
+   * PDFs and text files are always documents.
+   */
+  type?: string;
 }
 
-const TEXT_FIELDS = ["caption", "date", "photographer", "album", "sourceUrl"] as const;
+const TEXT_FIELDS = [
+  "caption",
+  "date",
+  "photographer",
+  "album",
+  "sourceUrl",
+  "note",
+  "title",
+  "kind",
+  "type",
+] as const;
 
 const text = (value: unknown): string =>
   typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : "";
@@ -107,17 +128,26 @@ export const IMAGE_EXTENSIONS: Record<string, string> = {
   gif: "image/gif",
 };
 
+/** Files that are documents whatever their sidecar says. */
+export const DOCUMENT_EXTENSIONS: Record<string, string> = {
+  pdf: "application/pdf",
+  txt: "text/plain",
+  md: "text/markdown",
+};
+
 export interface FolderFile {
   /** Path inside the folder, with "/" between parts. */
   path: string;
   contentType: string;
+  /** What it is by its file type; a picture's sidecar can still make it a document. */
+  kind: "photo" | "document";
   /** Path of the JSON file of details beside it, if there is one. */
   sidecar: string | null;
 }
 
 /**
- * Sorts a folder's file list into pictures (each with its sidecar, if any)
- * and everything else. A sidecar is "<picture>.json" or the picture's name
+ * Sorts a folder's file list into pictures and documents (each with its
+ * sidecar, if any) and everything else. A sidecar is "<picture>.json" or the picture's name
  * with ".json" in place of its extension. Hidden files are ignored.
  */
 export function planFolder(paths: readonly string[]): { files: FolderFile[]; skipped: string[] } {
@@ -128,7 +158,8 @@ export function planFolder(paths: readonly string[]): { files: FolderFile[]; ski
   const rest: string[] = [];
   for (const path of [...visible].sort()) {
     const dot = path.lastIndexOf(".");
-    const contentType = dot < 0 ? undefined : IMAGE_EXTENSIONS[path.slice(dot + 1).toLowerCase()];
+    const extension = dot < 0 ? "" : path.slice(dot + 1).toLowerCase();
+    const contentType = IMAGE_EXTENSIONS[extension] ?? DOCUMENT_EXTENSIONS[extension];
     if (!contentType) {
       rest.push(path);
       continue;
@@ -137,7 +168,12 @@ export function planFolder(paths: readonly string[]): { files: FolderFile[]; ski
       [`${path}.json`, `${path.slice(0, dot)}.json`].find((candidate) => all.has(candidate)) ??
       null;
     if (sidecar) used.add(sidecar);
-    files.push({ path, contentType, sidecar });
+    files.push({
+      path,
+      contentType,
+      kind: IMAGE_EXTENSIONS[extension] ? "photo" : "document",
+      sidecar,
+    });
   }
   return { files, skipped: rest.filter((path) => !used.has(path)) };
 }

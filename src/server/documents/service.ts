@@ -39,6 +39,8 @@ export interface DocumentView {
   citation: string | null;
   /** Whether the caller may change or delete it. */
   canEdit: boolean;
+  /** True while it sits in the review queue, unseen by the rest of the family. */
+  waiting: boolean;
   /** How many recorded facts cite it. It cannot be deleted while any do. */
   citedBy: number;
 }
@@ -49,7 +51,8 @@ export async function getDocument(actor: Actor, id: string): Promise<DocumentVie
   assertCan(actor, "read");
   if (!UUID.test(id)) return null;
   const doc = await getDb().document.findFirst({
-    where: { id, status: "PUBLISHED" },
+    // One still in the review queue is only for the people who review.
+    where: { id, ...(can(actor, "write") ? {} : { status: "PUBLISHED" }) },
     include: { sources: { select: { citation: true }, orderBy: { createdAt: "asc" }, take: 1 } },
   });
   if (!doc) return null;
@@ -67,6 +70,7 @@ export async function getDocument(actor: Actor, id: string): Promise<DocumentVie
     originalUrl: doc.originalUrl?.startsWith("https://") ? doc.originalUrl : null,
     citation: doc.sources[0]?.citation ?? null,
     canEdit: can(actor, "write"),
+    waiting: doc.status !== "PUBLISHED",
     citedBy,
   };
 }
@@ -215,7 +219,7 @@ export type CreateResult =
  */
 export async function createDocument(
   actor: Actor,
-  input: DocumentFormInput & { fileKey?: string; filename?: string },
+  input: DocumentFormInput & { fileKey?: string; filename?: string; review?: boolean },
 ): Promise<CreateResult> {
   assertCan(actor, "write");
   const { errors, kind, date, text: typed, ...checked } = check(input);
@@ -273,6 +277,8 @@ export async function createDocument(
         mimeType: mimeType ?? "text/plain",
         bytes: bytes?.byteLength ?? Buffer.byteLength(typed),
         uploadedById: actor.kind === "user" ? actor.userId : null,
+        // Bulk arrivals wait in the review queue.
+        status: input.review ? "NEEDS_REVIEW" : "PUBLISHED",
         ...toColumns(date),
       },
     });

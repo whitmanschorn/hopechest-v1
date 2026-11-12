@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Alert, Button, Checkbox, Group, Paper, Stack, Text, TextInput } from "@mantine/core";
 import { useMounted } from "@mantine/hooks";
-import { IconCheck, IconTrash } from "@tabler/icons-react";
+import { IconCheck, IconFileText, IconTrash } from "@tabler/icons-react";
 import {
   dateAction,
   discardAction,
@@ -25,8 +25,26 @@ export interface ReviewTile {
   problems: string[];
 }
 
-/** The photos of a batch still waiting: pick some or all, date them, publish or discard. */
-export function ReviewBoard({ batchId, photos }: { batchId: string; photos: ReviewTile[] }) {
+export interface ReviewPaper {
+  id: string;
+  title: string;
+  kind: string;
+  date: string | null;
+  filename: string | null;
+  hasText: boolean;
+  problems: string[];
+}
+
+/** What a batch brought that is still waiting: pick some or all, date photos, publish or discard. */
+export function ReviewBoard({
+  batchId,
+  photos,
+  documents,
+}: {
+  batchId: string;
+  photos: ReviewTile[];
+  documents: ReviewPaper[];
+}) {
   const ready = useMounted();
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [date, setDate] = useState("");
@@ -34,7 +52,9 @@ export function ReviewBoard({ batchId, photos }: { batchId: string; photos: Revi
   const [busy, start] = useTransition();
 
   // Photos can leave the page (published, discarded) while still picked.
-  const chosen = photos.filter((photo) => picked.has(photo.id)).map((photo) => photo.id);
+  const everything = [...documents, ...photos].map((entry) => entry.id);
+  const chosen = everything.filter((id) => picked.has(id));
+  const chosenPhotos = photos.filter((photo) => picked.has(photo.id)).map((photo) => photo.id);
   const run = (action: () => Promise<ReviewResult>, clear = true) =>
     start(async () => {
       const answer = await action();
@@ -56,13 +76,18 @@ export function ReviewBoard({ batchId, photos }: { batchId: string; photos: Revi
         </Alert>
       )}
 
-      {photos.length === 0 ? (
+      {everything.length === 0 ? (
         <Paper withBorder p="lg" data-testid="review-done">
           <Group justify="space-between">
             <Text>Nothing in this batch is waiting for review.</Text>
-            <LinkButton href="/photos" variant="default">
-              See the photos
-            </LinkButton>
+            <Group gap="xs">
+              <LinkButton href="/photos" variant="default">
+                See the photos
+              </LinkButton>
+              <LinkButton href="/documents" variant="default">
+                See the documents
+              </LinkButton>
+            </Group>
           </Group>
         </Paper>
       ) : (
@@ -72,17 +97,16 @@ export function ReviewBoard({ batchId, photos }: { batchId: string; photos: Revi
               <Group gap="sm">
                 <Checkbox
                   label={chosen.length > 0 ? `${chosen.length} picked` : "Pick all"}
-                  checked={chosen.length === photos.length}
-                  indeterminate={chosen.length > 0 && chosen.length < photos.length}
+                  checked={chosen.length === everything.length}
+                  indeterminate={chosen.length > 0 && chosen.length < everything.length}
                   onChange={(event) =>
-                    setPicked(
-                      new Set(event.currentTarget.checked ? photos.map((photo) => photo.id) : []),
-                    )
+                    setPicked(new Set(event.currentTarget.checked ? everything : []))
                   }
                   data-testid="review-pick-all"
                 />
                 <TextInput
                   aria-label="Date for the picked photos"
+                  disabled={photos.length === 0}
                   placeholder='Date, e.g. "1974"'
                   size="xs"
                   w={150}
@@ -93,8 +117,8 @@ export function ReviewBoard({ batchId, photos }: { batchId: string; photos: Revi
                 <Button
                   size="xs"
                   variant="default"
-                  disabled={chosen.length === 0 || !date.trim() || busy}
-                  onClick={() => run(() => dateAction(batchId, chosen, date), false)}
+                  disabled={chosenPhotos.length === 0 || !date.trim() || busy}
+                  onClick={() => run(() => dateAction(batchId, chosenPhotos, date), false)}
                   data-testid="review-set-date"
                 >
                   Set date
@@ -123,11 +147,45 @@ export function ReviewBoard({ batchId, photos }: { batchId: string; photos: Revi
                 >
                   {chosen.length > 0
                     ? `Publish ${chosen.length} picked`
-                    : `Publish all ${photos.length}`}
+                    : `Publish all ${everything.length}`}
                 </Button>
               </Group>
             </Group>
           </div>
+
+          {documents.length > 0 && (
+            <Stack gap={0} data-testid="review-documents">
+              {documents.map((doc) => (
+                <label key={doc.id} className={classes.paper} data-testid="review-document">
+                  <input
+                    type="checkbox"
+                    checked={picked.has(doc.id)}
+                    onChange={() => toggle(doc.id)}
+                    aria-label={`Pick ${doc.title}`}
+                    data-testid="review-pick"
+                  />
+                  <div>
+                    <Text fz="sm" fw={500}>
+                      <IconFileText size={14} aria-hidden /> {doc.title}
+                    </Text>
+                    <Text fz="xs" c="dimmed">
+                      {doc.kind} · {doc.date ?? "no date yet"}
+                      {doc.hasText ? "" : " · not typed out yet"}
+                      {doc.filename ? ` · ${doc.filename}` : ""}
+                    </Text>
+                    {doc.problems.map((problem) => (
+                      <Text key={problem} fz="xs" c="orange" data-testid="review-problem">
+                        {problem}
+                      </Text>
+                    ))}
+                    <TextLink href={`/documents/${doc.id}`} fz="xs" data-testid="review-open">
+                      Open to read or edit
+                    </TextLink>
+                  </div>
+                </label>
+              ))}
+            </Stack>
+          )}
 
           <div className={classes.grid} data-testid="review-grid">
             {photos.map((photo) => (

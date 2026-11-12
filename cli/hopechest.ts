@@ -15,6 +15,7 @@ import {
   type CommandLine,
 } from "./lib/args.ts";
 import { parseSidecar } from "../src/lib/ingest/sidecar.ts";
+import { convertFacebookExport } from "./facebook.ts";
 import { runIngest } from "./ingest.ts";
 import { callApi, UnreachableError } from "./lib/api.ts";
 import { resolveTarget, type Target } from "./lib/config.ts";
@@ -41,7 +42,8 @@ The key comes from HOPECHEST_<NAME>_API_KEY (e.g. HOPECHEST_STAGING_API_KEY).
 Commands
   whoami${" ".repeat(Math.max(1, width - 4))}Which chest this is and what the key may do
   routes${" ".repeat(Math.max(1, width - 4))}Every route of the REST API
-  ingest${" ".repeat(Math.max(1, width - 4))}Bring in a folder of pictures (see below)
+  ingest${" ".repeat(Math.max(1, width - 4))}Bring in a folder of pictures and documents (see below)
+  facebook-export${" ".repeat(Math.max(1, width - 13))}Turn a Facebook export into a folder to ingest
 ${commands}
 
 Any route directly
@@ -55,6 +57,11 @@ Bringing in a folder
   New photos wait in the review queue until someone publishes them. Safe to
   run again: files already in the chest are not sent twice. A picture's own
   details go in a JSON file beside it (slide-001.json); see docs/ingest.md.
+
+From Facebook
+  hopechest facebook-export <unzipped-export-folder> --out <folder>
+  Sends nothing. Writes each photo with what Facebook knew about it, ready
+  for "hopechest ingest <folder> --source facebook_export". See docs/facebook.md.
 
 Examples
   hopechest find-people q=lucille
@@ -117,6 +124,19 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "facebook-export") {
+    const { out, ...others } = line.options;
+    const [folder, ...extra] = line.rest;
+    if (!folder || extra.length > 0 || Object.keys(others).length > 0) {
+      throw new UsageError(
+        "Usage: hopechest facebook-export <unzipped-export-folder> --out <folder>",
+      );
+    }
+    const report = convertFacebookExport(folder, out, (text) => console.error(text));
+    console.log(JSON.stringify(report, null, 2));
+    return 0;
+  }
+  if (line.options.out) throw new UsageError('--out only goes with "hopechest facebook-export".');
   if (command === "ingest") return ingest(line);
   if (Object.keys(line.options).length > 0) {
     throw new UsageError(`--${Object.keys(line.options)[0]} only goes with "hopechest ingest".`);
