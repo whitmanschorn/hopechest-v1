@@ -1,8 +1,8 @@
 # The command-line tool
 
 `hopechest` reads and changes a chest from a terminal. It calls the REST API (`docs/api.md`), so it
-can do what an API key may do and nothing more. It is the place bulk work will live: folder ingest
-and face detection are added to it in later pull requests.
+can do what an API key may do and nothing more. It is also where bulk work lives: `hopechest ingest` brings in a folder of scans
+(`docs/ingest.md`), and face detection will be added to it.
 
 ## Setting up
 
@@ -58,6 +58,11 @@ hopechest routes
 hopechest get people q=lucille
 hopechest patch places/balboa-island notes="Home of the banana stand."
 ```
+
+## Bringing in a folder
+
+`hopechest ingest <folder>` sends a folder of pictures as one batch for review. It has its own
+guide: `docs/ingest.md`.
 
 ## Output
 

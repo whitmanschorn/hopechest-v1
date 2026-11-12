@@ -16,6 +16,7 @@ describe("parseCommandLine", () => {
     expect(parseCommandLine(["--env", "staging", "find-people", "q=lucille"])).toEqual({
       env: "staging",
       help: false,
+      options: {},
       command: "find-people",
       rest: ["q=lucille"],
     });
@@ -32,6 +33,22 @@ describe("parseCommandLine", () => {
     });
     expect(() => parseCommandLine(["post", "--body", "[1]"])).toThrow(UsageError);
     expect(() => parseCommandLine(["post", "--body", "nope"])).toThrow(UsageError);
+  });
+
+  it("collects the options of the ingest command", () => {
+    const line = parseCommandLine([
+      "ingest",
+      "./box",
+      "--label",
+      "Box 12",
+      "--date=1974",
+      "--dry-run",
+    ]);
+    expect(line).toMatchObject({
+      command: "ingest",
+      rest: ["./box"],
+      options: { label: "Box 12", date: "1974", "dry-run": "yes" },
+    });
   });
 
   it("refuses unknown options and options missing a value", () => {

@@ -12,7 +12,11 @@ import {
   readPairs,
   UsageError,
   type ApiRequest,
+  type CommandLine,
 } from "./lib/args.ts";
+import { parseSidecar } from "../src/lib/ingest/sidecar.ts";
+import { runIngest } from "./ingest.ts";
+import { callApi, UnreachableError } from "./lib/api.ts";
 import { resolveTarget, type Target } from "./lib/config.ts";
 
 const RAW_METHODS = ["get", "post", "patch", "delete"];
@@ -37,11 +41,20 @@ The key comes from HOPECHEST_<NAME>_API_KEY (e.g. HOPECHEST_STAGING_API_KEY).
 Commands
   whoami${" ".repeat(Math.max(1, width - 4))}Which chest this is and what the key may do
   routes${" ".repeat(Math.max(1, width - 4))}Every route of the REST API
+  ingest${" ".repeat(Math.max(1, width - 4))}Bring in a folder of pictures (see below)
 ${commands}
 
 Any route directly
   hopechest get <path> [name=value ...]        hopechest get people q=lucille
   hopechest post|patch|delete <path> [name=value ...]
+
+Bringing in a folder
+  hopechest ingest <folder> [--label "Box 12"] [--date 1974] [--album "Box 12"]
+                            [--people "lucille, george-sr"] [--photographer ...]
+                            [--source scan] [--dry-run]
+  New photos wait in the review queue until someone publishes them. Safe to
+  run again: files already in the chest are not sent twice. A picture's own
+  details go in a JSON file beside it (slide-001.json); see docs/ingest.md.
 
 Examples
   hopechest find-people q=lucille
@@ -60,34 +73,35 @@ function commandHelp(tool: (typeof TOOLS)[number]): string {
 }
 
 async function send(target: Target, request: ApiRequest): Promise<number> {
-  let response: Response;
-  try {
-    response = await fetch(`${target.url}/api/v1/${request.path}`, {
-      method: request.method,
-      headers: {
-        Authorization: `Bearer ${target.key}`,
-        ...(request.body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: request.body ? JSON.stringify(request.body) : undefined,
-    });
-  } catch (error) {
-    console.error(`Could not reach ${target.url}: ${(error as Error).message}`);
-    return 1;
-  }
-  const text = await response.text();
-  let shown = text;
-  try {
-    shown = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    // Not JSON (a proxy's error page, say): show it as it came.
-  }
-  if (response.ok) {
+  const answer = await callApi(target, request);
+  const shown = answer.json === null ? answer.text : JSON.stringify(answer.json, null, 2);
+  if (answer.ok) {
     if (shown) console.log(shown);
     return 0;
   }
-  console.error(`${response.status} from ${target.name} (${target.url})`);
+  console.error(`${answer.status} from ${target.name} (${target.url})`);
   if (shown) console.error(shown);
   return 1;
+}
+
+async function ingest(line: CommandLine): Promise<number> {
+  const [folder, ...extra] = line.rest;
+  if (!folder || extra.length > 0) {
+    throw new UsageError(
+      "Usage: hopechest ingest <folder> [--label ...] [--date ...] [--album ...]",
+    );
+  }
+  const { label, source, ...details } = line.options;
+  const dryRun = details["dry-run"] === "yes";
+  delete details["dry-run"];
+  const report = await runIngest(
+    dryRun ? null : () => resolveTarget(line.env, process.env),
+    folder,
+    { label, source, dryRun, defaults: parseSidecar(details) },
+    (text) => console.error(text),
+  );
+  console.log(JSON.stringify(report, null, 2));
+  return report.failed.length > 0 ? 1 : 0;
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -103,14 +117,17 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "ingest") return ingest(line);
+  if (Object.keys(line.options).length > 0) {
+    throw new UsageError(`--${Object.keys(line.options)[0]} only goes with "hopechest ingest".`);
+  }
+
   if (command === "whoami" || command === "routes") {
     const target = resolveTarget(line.env, process.env);
     if (command === "routes") return send(target, { method: "GET", path: "" });
-    const response = await fetch(`${target.url}/api/v1`, {
-      headers: { Authorization: `Bearer ${target.key}` },
-    });
-    if (!response.ok) return send(target, { method: "GET", path: "" });
-    const index = (await response.json()) as {
+    const answer = await callApi(target, { method: "GET", path: "" });
+    if (!answer.ok) return send(target, { method: "GET", path: "" });
+    const index = answer.json as {
       chest: unknown;
       caller: unknown;
       routes: { allowed: boolean }[];
@@ -153,7 +170,7 @@ async function main(argv: string[]): Promise<number> {
 try {
   process.exitCode = await main(process.argv.slice(2));
 } catch (error) {
-  if (!(error instanceof UsageError)) throw error;
+  if (!(error instanceof UsageError) && !(error instanceof UnreachableError)) throw error;
   console.error(error.message);
-  process.exitCode = 2;
+  process.exitCode = error instanceof UsageError ? 2 : 1;
 }

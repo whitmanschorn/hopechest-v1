@@ -32,6 +32,16 @@ import {
   updatePerson,
   type RelationInput,
 } from "@/server/people/service";
+import {
+  addItem,
+  completeBatch,
+  datePhotos,
+  discardPhotos,
+  getBatch,
+  listBatches,
+  openBatch,
+  publishPhotos,
+} from "@/server/ingest/service";
 import { deletePhoto, getPhoto, listPhotos, updatePhoto } from "@/server/photos/service";
 import {
   createPlace,
@@ -522,6 +532,119 @@ export const ROUTES: readonly ApiRoute[] = [
       if (!(await getAlbum(actor, params.id))) return missing("album");
       await deleteAlbum(actor, params.id);
       return ok({ ok: true });
+    },
+  },
+
+  // ── bulk arrivals ──
+  {
+    method: "GET",
+    path: "ingest/batches",
+    needs: "write",
+    summary: "Every batch of files brought in, newest first, with how many photos await review.",
+    run: async ({ actor }) => ok({ batches: await listBatches(actor) }),
+  },
+  {
+    method: "POST",
+    path: "ingest/batches",
+    needs: "ingest",
+    summary:
+      "Start a batch, or pick up your unfinished one with the same label. Says how to upload here.",
+    fields: "label, source (folder|scan|facebook_export|facebook_capture; default folder)",
+    run: async ({ actor, body }) => {
+      const result = await openBatch(actor, {
+        label: asText(body.label),
+        source: asText(body.source),
+      });
+      if (!result.ok) return invalid(result);
+      const { batch, resumed, upload } = result;
+      return ok({ batch, resumed, upload }, resumed ? 200 : 201);
+    },
+  },
+  {
+    method: "GET",
+    path: "ingest/batches/:id",
+    needs: "write",
+    summary: "One batch: the photos waiting for review and the files that failed.",
+    run: async ({ actor, params }) => {
+      const batch = await getBatch(actor, params.id);
+      return batch ? ok({ batch }) : missing("batch");
+    },
+  },
+  {
+    method: "POST",
+    path: "ingest/batches/:id/items",
+    needs: "ingest",
+    summary:
+      "One file of a batch. Send its hash first: the answer is `duplicate` or `upload`. " +
+      "After uploading the original, send again with `key` to make the photo.",
+    fields:
+      "sha256, filename, key (of the uploaded original), " +
+      "sidecar ({ caption, date, photographer, people (names or slugs), album (title), sourceUrl })",
+    run: async ({ actor, params, body }) => {
+      const result = await addItem(actor, params.id, {
+        sha256: asText(body.sha256),
+        filename: asText(body.filename) || undefined,
+        key: asText(body.key) || undefined,
+        sidecar: body.sidecar,
+      });
+      if (!result.ok) {
+        const error =
+          result.status === 404 ? "not_found" : result.status === 409 ? "finished" : "invalid";
+        return { status: result.status, body: { error, message: result.message } };
+      }
+      const { state, photoId, problems } = result;
+      return ok({ state, photoId, problems });
+    },
+  },
+  {
+    method: "POST",
+    path: "ingest/batches/:id/complete",
+    needs: "ingest",
+    summary: "Say that no more files are coming. The photos stay in the review queue.",
+    run: async ({ actor, params }) => {
+      const batch = await completeBatch(actor, params.id);
+      return batch ? ok({ batch }) : missing("batch");
+    },
+  },
+  {
+    method: "POST",
+    path: "ingest/batches/:id/publish",
+    needs: "write",
+    summary: "Let the family see a batch's waiting photos: all of them, or only `photos`.",
+    fields: "photos (optional list of photo ids)",
+    run: async ({ actor, params, body }) => {
+      if (!(await getBatch(actor, params.id))) return missing("batch");
+      const published = await publishPhotos(
+        actor,
+        params.id,
+        "photos" in body ? asList(body.photos) : undefined,
+      );
+      return ok({ published, batch: await getBatch(actor, params.id) });
+    },
+  },
+  {
+    method: "POST",
+    path: "ingest/batches/:id/discard",
+    needs: "write",
+    summary: "Throw out waiting photos from a batch. Published photos are never touched.",
+    fields: "photos (list of photo ids)",
+    run: async ({ actor, params, body }) => {
+      if (!(await getBatch(actor, params.id))) return missing("batch");
+      const discarded = await discardPhotos(actor, params.id, asList(body.photos));
+      return ok({ discarded, batch: await getBatch(actor, params.id) });
+    },
+  },
+  {
+    method: "POST",
+    path: "ingest/batches/:id/date",
+    needs: "write",
+    summary: "Give the same date to several waiting photos of a batch.",
+    fields: 'photos (list of photo ids), date (text, e.g. "1974" or "around 1974")',
+    run: async ({ actor, params, body }) => {
+      if (!(await getBatch(actor, params.id))) return missing("batch");
+      const result = await datePhotos(actor, params.id, asList(body.photos), asText(body.date));
+      if (!result.ok) return invalid({ errors: { date: result.message } });
+      return ok({ dated: result.count, batch: await getBatch(actor, params.id) });
     },
   },
 ];
