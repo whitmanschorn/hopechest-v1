@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { fromColumns, parseFuzzyDate, toColumns, type FuzzyDate } from "@/lib/fuzzyDate";
+import { boxFromColumns, type Box } from "@/lib/photos/box";
 import {
   derivedKeys,
   fileUrl,
@@ -26,7 +27,8 @@ export interface PhotoDetail extends PhotoCard {
   originalFilename: string | null;
   photographer: string | null;
   place: { slug: string; label: string } | null;
-  people: { slug: string; displayName: string }[];
+  /** Who is in it, and where in the picture if that has been marked. */
+  people: { slug: string; displayName: string; box: Box | null }[];
   uploadedBy: string | null;
   uploadedAt: Date;
   /** Whether the signed-in person may edit or delete it. */
@@ -118,7 +120,7 @@ export async function getPhoto(actor: Actor, id: string): Promise<PhotoDetail | 
     originalFilename: photo.originalFilename,
     photographer: photo.photographer,
     place: photo.place,
-    people: photo.people.map((tag) => tag.person),
+    people: photo.people.map((tag) => ({ ...tag.person, box: boxFromColumns(tag) })),
     uploadedBy: photo.uploadedBy?.person?.displayName ?? null,
     uploadedAt: photo.createdAt,
     canEdit: can(actor, "write"),
@@ -266,6 +268,30 @@ export async function updatePhoto(
     });
   });
   return { ok: true };
+}
+
+/**
+ * Marks where a tagged person is in the photo, or clears the mark with null.
+ * The person must already be tagged; false if they are not.
+ */
+export async function setTagBox(
+  actor: Actor,
+  photoId: string,
+  personSlug: string,
+  box: Box | null,
+): Promise<boolean> {
+  assertCan(actor, "write");
+  if (!UUID.test(photoId)) return false;
+  const { count } = await getDb().photoPerson.updateMany({
+    where: { photoId, person: { slug: personSlug } },
+    data: {
+      boxX: box?.x ?? null,
+      boxY: box?.y ?? null,
+      boxW: box?.w ?? null,
+      boxH: box?.h ?? null,
+    },
+  });
+  return count > 0;
 }
 
 /** Removes the photo and its stored files. */

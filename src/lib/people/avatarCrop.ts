@@ -66,6 +66,27 @@ export function pan(
   );
 }
 
+/**
+ * A starting view around a face box (percentages of the photo), with some room
+ * for hair and shoulders.
+ */
+export function viewForBox(
+  box: { x: number; y: number; w: number; h: number },
+  width: number,
+  height: number,
+): CropView {
+  const side = Math.max((box.w / 100) * width, (box.h / 100) * height) * 1.6;
+  return clampView(
+    {
+      cx: (box.x + box.w / 2) / 100,
+      cy: (box.y + box.h / 2) / 100,
+      zoom: Math.min(width, height) / side,
+    },
+    width,
+    height,
+  );
+}
+
 const percent = (value: number) => Math.round(value * 10000) / 100;
 
 export function toStored(square: Square, width: number, height: number): StoredCrop {

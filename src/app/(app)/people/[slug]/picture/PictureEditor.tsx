@@ -22,8 +22,10 @@ import {
   pan,
   sourceSquare,
   toStored,
+  viewForBox,
   type CropView,
 } from "@/lib/people/avatarCrop";
+import type { Box } from "@/lib/photos/box";
 import { IMAGE_TYPES } from "@/lib/photos/keys";
 import type { PictureSubject } from "@/server/people/picture";
 import { removePictureAction, savePictureAction } from "./actions";
@@ -72,13 +74,14 @@ export function PictureEditor({ subject, welcome }: { subject: PictureSubject; w
     [],
   );
 
-  const open = async (url: string, photoId: string | null) => {
+  const open = async (url: string, photoId: string | null, box: Box | null = null) => {
     setError(null);
     try {
       const loaded = await loadImage(url);
       image.current = loaded;
       setSource({ url, photoId, width: loaded.naturalWidth, height: loaded.naturalHeight });
-      setView(START);
+      // A photo where their face is already marked opens on the face.
+      setView(box ? viewForBox(box, loaded.naturalWidth, loaded.naturalHeight) : START);
     } catch (problem) {
       setError((problem as Error).message);
     }
@@ -282,7 +285,7 @@ export function PictureEditor({ subject, welcome }: { subject: PictureSubject; w
                   <UnstyledButton
                     key={photo.id}
                     className={classes.choice}
-                    onClick={() => void open(photo.displayUrl, photo.id)}
+                    onClick={() => void open(photo.displayUrl, photo.id, photo.box)}
                     aria-label={
                       photo.caption ? `Use the photo: ${photo.caption}` : "Use this photo"
                     }
