@@ -263,6 +263,59 @@ try {
     });
   }
 
+  // Wiki pages: each wiki article becomes a page, a person's own where the
+  // seed says so and a topic page otherwise. A page someone has edited since
+  // is left alone, so re-seeding staging never undoes a person's writing.
+  const SEED_AUTHOR = "Arrested Development Wiki (CC BY-SA)";
+  const articleOwner = new Map(
+    data.people.filter((p) => p.article).map((p) => [p.article!, p.slug]),
+  );
+  let pages = 0;
+  for (const doc of data.documents) {
+    if (doc.kind !== "article") continue;
+    const owner = articleOwner.get(doc.slug);
+    // The copied text has a few leftovers of the wiki's own markup on lines by themselves.
+    const text = doc.text
+      .replace(/^\s*"?\]\]\s*$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    const body = `${text}\n\n*From the Arrested Development Wiki, ${doc.license.replace(/\s*\(.*\)$/, "")}.* [Where it came from](${doc.sourceUrl})`;
+    const title = owner ? data.people.find((p) => p.slug === owner)!.displayName : doc.title;
+    const existing = owner
+      ? await db.article.findUnique({
+          where: { personId: personId(owner) },
+          include: { revisions: { select: { authorLabel: true } } },
+        })
+      : await db.article.findFirst({
+          where: { slug: doc.slug, personId: null },
+          include: { revisions: { select: { authorLabel: true } } },
+        });
+    const revision = { title, body, authorLabel: SEED_AUTHOR };
+    if (!existing) {
+      await db.article.create({
+        data: {
+          slug: owner ? `person-${personId(owner)}` : doc.slug,
+          title,
+          body,
+          personId: owner ? personId(owner) : null,
+          revisions: { create: { ...revision, summary: "Copied from the wiki" } },
+        },
+      });
+      pages++;
+    } else if (
+      (existing.body !== body || existing.title !== title) &&
+      existing.revisions.every((entry) => entry.authorLabel === SEED_AUTHOR)
+    ) {
+      await db.$transaction([
+        db.article.update({ where: { id: existing.id }, data: { title, body } }),
+        db.articleRevision.create({
+          data: { articleId: existing.id, ...revision, summary: "Updated from the wiki" },
+        }),
+      ]);
+      pages++;
+    }
+  }
+
   // An event recorded in a document is tied to it by an accepted claim, the
   // same trail a reviewer leaves when accepting something an agent proposed.
   for (const event of data.events) {
@@ -300,7 +353,8 @@ try {
 
   console.log(
     `Seeded ${family}: ${data.people.length} people, ${data.relationships.length} relationships, ` +
-      `${data.places.length} places, ${data.events.length} events, ${data.documents.length} documents.`,
+      `${data.places.length} places, ${data.events.length} events, ${data.documents.length} documents, ` +
+      `${pages} wiki pages written.`,
   );
 } finally {
   await db.$disconnect();

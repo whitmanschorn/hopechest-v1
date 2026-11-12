@@ -5,6 +5,13 @@ import { toFormInput, type PersonFormInput } from "@/lib/people/personEdit";
 import { toPlaceFormInput, type PlaceFormInput } from "@/lib/places/placeEdit";
 import type { Actor, Permission } from "@/server/actor";
 import {
+  getArticle,
+  getHistory,
+  listArticles,
+  saveArticle,
+  type ArticleRef,
+} from "@/server/wiki/service";
+import {
   createAlbum,
   deleteAlbum,
   getAlbum,
@@ -155,6 +162,39 @@ const EVENT_FIELDS =
 const PLACE_FIELDS = "label, street, city, region, country, lat, lng, notes";
 const PHOTO_FIELDS =
   "caption, date (text), photographer, people (list of slugs), albums (list of album ids)";
+const ARTICLE_FIELDS =
+  "title, body (text with ## headings, - lists, **bold**, [[links to people or pages]]), " +
+  "append (text to add to the end, instead of body), summary (what changed, for the history)";
+
+async function readArticle(actor: Actor, ref: ArticleRef): Promise<ApiReply> {
+  const article = await getArticle(actor, ref);
+  return article ? ok({ article }) : missing(ref.kind === "person" ? "person" : "page");
+}
+
+/** Saves a page from a request: the whole text, or an addition to what is there. */
+async function writeArticle(
+  actor: Actor,
+  ref: ArticleRef,
+  body: Record<string, unknown>,
+): Promise<ApiReply> {
+  const current = await getArticle(actor, ref);
+  if (!current) return missing(ref.kind === "person" ? "person" : "page");
+  const addition = asText(body.append).trim();
+  const text =
+    "body" in body
+      ? asText(body.body)
+      : addition
+        ? [current.body, addition].filter(Boolean).join("\n\n")
+        : current.body;
+  const result = await saveArticle(actor, ref, {
+    title: "title" in body ? asText(body.title) : undefined,
+    body: text,
+    summary: asText(body.summary) || undefined,
+  });
+  if (!result.ok) return invalid(result);
+  return ok({ article: await getArticle(actor, result.ref), changed: result.changed });
+}
+
 const DOCUMENT_FIELDS =
   'title, kind (letter|record|recipe|story|article|other), date (text, e.g. "1933"), ' +
   "text (what it says; ## starts a section heading)";
@@ -613,6 +653,74 @@ export const ROUTES: readonly ApiRoute[] = [
       await deleteAlbum(actor, params.id);
       return ok({ ok: true });
     },
+  },
+
+  // ── wiki ──
+  {
+    method: "GET",
+    path: "articles",
+    needs: "read",
+    summary: "Every wiki page: topic pages, and the people who have been written about.",
+    run: async ({ actor }) => ok(await listArticles(actor)),
+  },
+  {
+    method: "POST",
+    path: "articles",
+    needs: "write",
+    summary: "Start a topic page. (A person's page is written at people/:slug/article.)",
+    fields: ARTICLE_FIELDS,
+    run: async ({ actor, body }) => {
+      const result = await saveArticle(actor, null, {
+        title: asText(body.title),
+        body: asText(body.body),
+        summary: asText(body.summary) || undefined,
+      });
+      if (!result.ok) return invalid(result);
+      return ok({ article: await getArticle(actor, result.ref) }, 201);
+    },
+  },
+  {
+    method: "GET",
+    path: "articles/:slug",
+    needs: "read",
+    summary: "One topic page: its title and text.",
+    run: ({ actor, params }) => readArticle(actor, { kind: "topic", slug: params.slug }),
+  },
+  {
+    method: "PATCH",
+    path: "articles/:slug",
+    needs: "write",
+    summary: "Change a topic page. `body` replaces the text; `append` adds to the end instead.",
+    fields: ARTICLE_FIELDS,
+    run: ({ actor, params, body }) =>
+      writeArticle(actor, { kind: "topic", slug: params.slug }, body),
+  },
+  {
+    method: "GET",
+    path: "articles/:slug/history",
+    needs: "read",
+    summary: "Every saved version of a topic page, newest first.",
+    run: async ({ actor, params }) => {
+      const history = await getHistory(actor, { kind: "topic", slug: params.slug });
+      return history ? ok({ history }) : missing("page");
+    },
+  },
+  {
+    method: "GET",
+    path: "people/:slug/article",
+    needs: "read",
+    summary: "What has been written about a person: their wiki page. Empty if nothing yet.",
+    run: ({ actor, params }) => readArticle(actor, { kind: "person", slug: params.slug }),
+  },
+  {
+    method: "PATCH",
+    path: "people/:slug/article",
+    needs: "write",
+    summary:
+      "Write or change a person's wiki page. `body` replaces the text; `append` adds to the end instead.",
+    fields: "body, append, summary (what changed)",
+    run: ({ actor, params, body }) =>
+      writeArticle(actor, { kind: "person", slug: params.slug }, body),
   },
 
   // ── proposed facts ──

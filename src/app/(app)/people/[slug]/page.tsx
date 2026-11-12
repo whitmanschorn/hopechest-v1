@@ -7,9 +7,11 @@ import { LinkButton } from "@/components/LinkButton";
 import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
 import { PhotoGrid } from "@/components/photos/PhotoGrid";
+import { ArticleBody } from "@/components/wiki/ArticleBody";
 import { PersonAvatar, PersonCard } from "@/components/people/PersonCard";
 import { RemoveRelationship } from "@/components/people/RemoveRelationship";
 import { describe } from "@/lib/fuzzyDate";
+import { editPath, historyPath } from "@/lib/wiki/paths";
 import { can } from "@/server/actor";
 import { requireActor } from "@/server/auth/session";
 import {
@@ -19,6 +21,9 @@ import {
   type Relative,
 } from "@/server/people/service";
 import { listPhotos } from "@/server/photos/service";
+import { getArticle, linkTargets } from "@/server/wiki/service";
+
+const day = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 export const metadata: Metadata = { title: "Person · Hopechest" };
 
@@ -57,6 +62,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const person = await getPerson(actor, slug);
   if (!person) notFound();
+  const articleRef = { kind: "person" as const, slug: person.slug };
+  const [article, targets] = await Promise.all([getArticle(actor, articleRef), linkTargets(actor)]);
   const canWrite = can(actor, "write");
   const photos = await listPhotos(actor, { person: person.slug });
   const options = canWrite
@@ -195,6 +202,42 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </Paper>
           </Section>
         )}
+
+        <Section title="Their story" testId="person-article">
+          {article?.exists ? (
+            <Paper p="lg" radius="md" withBorder bg="var(--hc-surface)">
+              <ArticleBody source={article.body} targets={targets} canCreate={article.canEdit} />
+            </Paper>
+          ) : (
+            <Text c="dimmed" data-testid="person-article-empty">
+              Nothing has been written about {person.displayName} yet.
+            </Text>
+          )}
+          <Group gap="xs" mt="sm">
+            {article?.canEdit && (
+              <LinkButton
+                href={editPath(articleRef)}
+                variant="default"
+                size="compact-sm"
+                leftSection={<IconPencil size={14} />}
+                data-testid="edit-person-article"
+              >
+                {article.exists ? "Edit their story" : "Write about them"}
+              </LinkButton>
+            )}
+            {article?.exists && (
+              <LinkButton
+                href={historyPath(articleRef)}
+                variant="subtle"
+                size="compact-sm"
+                leftSection={<IconHistory size={14} />}
+                data-testid="person-article-history"
+              >
+                {`Edited ${day.format(article.updatedAt!)} by ${article.updatedBy}`}
+              </LinkButton>
+            )}
+          </Group>
+        </Section>
 
         <Section title="Family" testId="person-family">
           {!hasFamily && <Text c="dimmed">No relatives recorded yet.</Text>}

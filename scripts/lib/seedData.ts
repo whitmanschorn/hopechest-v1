@@ -33,6 +33,8 @@ export interface SeedPerson {
   /** Omit when unknown. */
   isLiving?: boolean;
   notes?: string;
+  /** File name (without extension) of the document that becomes their wiki page. */
+  article?: string;
 }
 
 export interface SeedRelationship {
@@ -153,6 +155,9 @@ export function validateSeed(data: SeedData): string[] {
 
   for (const person of data.people) {
     if (!person.displayName?.trim()) problems.push(`person "${person.slug}" has no displayName`);
+    if (person.article && !data.documents.some((doc) => doc.slug === person.article)) {
+      problems.push(`person "${person.slug}": no document "${person.article}" for their article`);
+    }
     if (person.gender && !GENDERS.includes(person.gender)) {
       problems.push(`person "${person.slug}" has unknown gender "${person.gender}"`);
     }

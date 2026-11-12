@@ -127,6 +127,16 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   passages Ask will cite.
 - A document that recorded facts cite cannot be deleted.
 
+## Wiki
+
+- Prose lives in the wiki (`src/server/wiki/`, `docs/wiki.md`): a page per person, shown on their
+  profile, and topic pages under `/wiki`. Every save adds an `article_revisions` row; never
+  update an article without one.
+- The markup is read by `src/lib/wiki/markup.ts` and drawn by `ArticleBody`, for the page and the
+  editor's preview alike. It never produces HTML from what was typed; keep it that way.
+- The recorded facts (people, relationships, events) stay the source for kinship and dates. The
+  wiki is the story around them.
+
 ## Proposed facts
 
 - Anything a model or assistant reads or works out goes through `proposeClaim`

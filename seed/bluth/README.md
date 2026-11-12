@@ -13,6 +13,9 @@ _Arrested Development_. It is the only family data allowed in this repository.
 | `questions.jsonl`    | Questions with reference answers, for testing Ask                              |
 | `CORRECTIONS.md`     | How this differs from the earlier `bluth-files` data, and why                  |
 
+Each wiki article also becomes a wiki page: the page of the person whose `people.json` entry names
+it under `"article"`, or a topic page otherwise.
+
 Load it with `npm run db:seed`. The script (`scripts/seed.ts`) checks the files first
 (`scripts/lib/seedData.ts`), matches every row on its `slug`, updates in place, and refuses to
 run where `HOPECHEST_ENV=production`. The same checks run in `npm test`.
