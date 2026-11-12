@@ -17,5 +17,6 @@ export async function saveWelcomeAction(_: WelcomeState, form: FormData): Promis
   };
   const result = await saveOwnProfile(actor, input);
   if (!result.ok) return { input, errors: result.errors };
-  redirect("/home");
+  // Next stop: a picture of themselves, which they may skip.
+  redirect(`/people/${result.slug}/picture?from=welcome`);
 }

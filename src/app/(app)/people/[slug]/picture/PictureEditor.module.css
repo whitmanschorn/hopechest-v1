@@ -1,0 +1,47 @@
+.window {
+  position: relative;
+  width: min(280px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--hc-surface);
+  box-shadow: 0 0 0 1px var(--hc-hairline);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.window:active {
+  cursor: grabbing;
+}
+
+.window:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 4px;
+}
+
+.window img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.choice {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+  box-shadow: 0 0 0 1px var(--hc-hairline);
+}
+
+.choice[data-chosen="true"] {
+  box-shadow: 0 0 0 3px var(--mantine-primary-color-filled);
+}
+
+.choice img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

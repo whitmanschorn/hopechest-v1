@@ -590,7 +590,7 @@ export async function removeRelationship(actor: Actor, relationshipId: string): 
 export async function saveOwnProfile(
   actor: Actor,
   input: { displayName: string; born: string },
-): Promise<{ ok: true } | { ok: false; errors: PersonErrors }> {
+): Promise<{ ok: true; slug: string } | { ok: false; errors: PersonErrors }> {
   assertCan(actor, "read");
   if (actor.kind !== "user")
     return { ok: false, errors: { displayName: "Only a signed-in member has a profile." } };
@@ -621,12 +621,14 @@ export async function saveOwnProfile(
 
   // Their own record is theirs to correct, so this goes through as a writer.
   const self: Actor = { ...actor, role: actor.role === "VIEWER" ? "CONTRIBUTOR" : actor.role };
+  let slug = current?.slug;
   if (current) {
     const saved = await updatePerson(self, current.slug, form);
     if (!saved.ok) return { ok: false, errors: saved.errors };
   } else {
     const created = await createPerson(self, form);
     if (!created.ok) return { ok: false, errors: created.errors };
+    slug = created.slug;
     const person = await db.person.findUniqueOrThrow({
       where: { slug: created.slug },
       select: { id: true },
@@ -634,7 +636,7 @@ export async function saveOwnProfile(
     await db.user.update({ where: { id: actor.userId }, data: { personId: person.id } });
   }
   await db.user.update({ where: { id: actor.userId }, data: { onboardedAt: new Date() } });
-  return { ok: true };
+  return { ok: true, slug: slug! };
 }
 
 // ───────────────────────────── history ─────────────────────────────
@@ -653,6 +655,7 @@ const HISTORY_LABELS: Record<string, string> = {
   ...FIELD_LABELS,
   relationship: "Family",
   created: "Added to the chest",
+  avatar: "Profile picture",
 };
 
 export async function getPersonHistory(
