@@ -206,6 +206,16 @@ try {
       url: doc.sourceUrl ?? null,
     };
 
+    // The database can be shared between checkouts while local files are not:
+    // an unchanged document may still be missing its scan in this folder.
+    if (scan && existing?.sha256 === sha256 && !process.env.BLOB_READ_WRITE_TOKEN) {
+      const type = doc.scan!.endsWith(".png") ? "image/png" : "image/jpeg";
+      const key = `documents/${existing.id}/original.${doc.scan!.endsWith(".png") ? "png" : "jpg"}`;
+      if (!existsSync(join(process.env.FILES_DIR ?? ".data/files", key))) {
+        await storeFile(key, scan, type);
+      }
+    }
+
     await db.$transaction(async (tx) => {
       let id = existing?.id;
       if (existing?.sha256 !== sha256) {

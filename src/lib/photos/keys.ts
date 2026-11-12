@@ -37,6 +37,11 @@ export function derivedKeys(photoId: string): { display: string; thumb: string }
   return { display: `photos/${photoId}/display.jpg`, thumb: `photos/${photoId}/thumb.jpg` };
 }
 
+/** A person's cropped profile picture. A new one gets a new key, so browsers never show a stale one. */
+export function avatarKey(personId: string, pictureId: string): string {
+  return `avatars/${personId}/${pictureId}.jpg`;
+}
+
 export function fileUrl(key: string): string {
   return `/api/files/${key}`;
 }

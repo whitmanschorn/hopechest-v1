@@ -99,6 +99,10 @@ test("invite someone by name, email and mobile; they join from the link and fini
   await expect(theirs.getByTestId("welcome-name")).toHaveValue(name);
   await theirs.getByTestId("welcome-born").fill("1990-06-10");
   await theirs.getByTestId("welcome-save").click();
+  // Next they are offered a profile picture, which they may skip.
+  await expect(theirs).toHaveURL(/\/picture\?from=welcome$/);
+  await expect(theirs.getByTestId("picture-title")).toHaveText("Add a picture of yourself");
+  await theirs.getByTestId("picture-skip").click();
   await expect(theirs).toHaveURL(/\/home$/);
   await theirs.getByTestId("user-menu").click();
   await expect(theirs.getByTestId("signed-in-as")).toHaveText(name);
@@ -166,6 +170,10 @@ test("invite someone who already has a page in the chest, as a viewer", async ({
   await expect(theirs.getByTestId("welcome-born")).toHaveValue("1950");
   await theirs.getByTestId("welcome-born").fill("1951-03-04");
   await theirs.getByTestId("welcome-save").click();
+  // Next they are offered a profile picture, which they may skip.
+  await expect(theirs).toHaveURL(/\/picture\?from=welcome$/);
+  await expect(theirs.getByTestId("picture-title")).toHaveText("Add a picture of yourself");
+  await theirs.getByTestId("picture-skip").click();
   await expect(theirs).toHaveURL(/\/home$/);
   await theirs.goto("/people/new");
   await expect(theirs.getByTestId("not-found-title")).toBeVisible();

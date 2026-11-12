@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { IconCalendarPlus, IconHistory, IconPencil } from "@tabler/icons-react";
+import { IconCalendarPlus, IconCamera, IconHistory, IconPencil } from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
@@ -117,7 +117,9 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
       <Stack gap="xl">
         <Group justify="space-between" align="flex-start" gap="md">
           <Group gap="md" wrap="nowrap" align="center">
-            <PersonAvatar person={person} size={84} />
+            <span data-testid="person-picture">
+              <PersonAvatar person={person} size={84} />
+            </span>
             <div>
               <Title order={1} data-testid="person-name">
                 {person.displayName}
@@ -137,6 +139,16 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </div>
           </Group>
           <Group gap="xs">
+            {(canWrite || person.isYou) && (
+              <LinkButton
+                href={`/people/${person.slug}/picture`}
+                variant="default"
+                leftSection={<IconCamera size={16} />}
+                data-testid="change-picture"
+              >
+                Picture
+              </LinkButton>
+            )}
             {canWrite && (
               <LinkButton
                 href={`/people/${person.slug}/edit`}
