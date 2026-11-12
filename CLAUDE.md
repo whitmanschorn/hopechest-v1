@@ -29,6 +29,7 @@ places, and an Ask feature that answers from it. One deployment serves one famil
 | `npx playwright test --last-failed`      | Re-run only what failed                                                     |
 | `npm run test:smoke`                     | Specs tagged `@smoke`                                                       |
 | `npm run pr-size`                        | Changed-line count against `origin/main`                                    |
+| `npm run hopechest -- <command>`         | The command-line tool (`docs/cli.md`)                                       |
 | `npm run db:up`                          | Start local Postgres (Docker, port 54329)                                   |
 | `npm run db:deploy`                      | Apply migrations                                                            |
 | `npm run db:migrate -- --name x`         | Write and apply a migration after editing `prisma/schema.prisma`            |
@@ -105,6 +106,8 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   in `src/server/mcp/tools.ts` naming a route and describing its input; it has no logic of its
   own. `.mcp.json` points Claude Code at staging and at a local server, with keys read from the
   environment.
+- `hopechest` (`cli/`, `docs/cli.md`) is the command-line tool. It calls `/api/v1` with a key and
+  has one command per MCP tool, taken from the same list. Run it with `npm run hopechest -- help`.
 
 ## UI
 

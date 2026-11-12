@@ -52,7 +52,8 @@ curl -H "Authorization: Bearer $KEY" "$SITE/api/v1/events?kind=marriage&person=l
 answers with the wedding of George Sr. and Lucille, and `GET /api/v1/events/<id>` adds the
 marriage licence under `sources`.
 
-The same operations are available to assistants as MCP tools: see `docs/mcp.md`. Two routes exist
+The same operations are available to assistants as MCP tools (`docs/mcp.md`) and from a terminal
+as the `hopechest` command (`docs/cli.md`). Two routes exist
 mainly for them: `GET /api/v1/kin` (who "grandma" is for a given person) and
 `GET /api/v1/documents/<id>` (a document's text).
 
