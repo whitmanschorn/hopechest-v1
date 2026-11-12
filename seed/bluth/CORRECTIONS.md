@@ -118,3 +118,10 @@ The 25 old questions became 35. Changes:
   brothers yet.
 - G.O.B.'s brief marriage is not an event because his wife is never named.
 - Tracey is also spelled "Tracy" in the articles; "Tracy Bluth" is kept as an alternate name.
+
+## Caption leftovers removed from the wiki text (2026-11-12)
+
+The copied articles carried the tail ends of picture captions, such as `"]]` or
+`" in "Good Grief"]]`, at the start of paragraphs. They are markup debris, not text. The files
+are left as copied; `stripCaptionLeftovers` in `scripts/lib/seedData.ts` removes the debris when
+the seed is read, so documents and wiki pages are both clean. No fact changed.

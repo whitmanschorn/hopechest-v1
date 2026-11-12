@@ -78,6 +78,24 @@ export interface SeedEvent {
 
 export const DOCUMENT_KINDS = ["article", "record", "letter", "recipe", "story", "other"] as const;
 
+/**
+ * The wiki articles were copied with the tail ends of picture captions left
+ * in: `"]]`, or `" in "Good Grief"]]`, at the start of a line, sometimes run
+ * straight into the paragraph after, or after the sentence before. This removes each one (everything up to
+ * a `]]` that no `[[` on the line opens) and keeps the paragraph.
+ */
+export function stripCaptionLeftovers(text: string): string {
+  return (
+    text
+      .replace(/^[^[\]\n]{0,120}\]\]/gm, "")
+      // The same, where the caption was run into the end of the sentence before it.
+      .replace(/ {2,}[^[\]\n.]{0,80}(?:"[^"\n]*"[^[\]\n]{0,10})?\]\] ?/g, " ")
+      .replace(/ ?"\]\] ?/g, " ")
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+  );
+}
+
 export interface SeedDocument {
   /** File name without extension; the stable key. */
   slug: string;
@@ -339,7 +357,7 @@ export function parseSeedDocument(slug: string, file: string): SeedDocument {
     ...(header.scan ? { scan: header.scan } : {}),
     license: header.license ?? "",
     ...(header.retrieved ? { retrieved: header.retrieved } : {}),
-    text: (match ? match[2] : file).trim(),
+    text: stripCaptionLeftovers(match ? match[2] : file).trim(),
   };
 }
 

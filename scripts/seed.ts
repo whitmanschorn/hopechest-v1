@@ -274,12 +274,7 @@ try {
   for (const doc of data.documents) {
     if (doc.kind !== "article") continue;
     const owner = articleOwner.get(doc.slug);
-    // The copied text has a few leftovers of the wiki's own markup on lines by themselves.
-    const text = doc.text
-      .replace(/^\s*"?\]\]\s*$/gm, "")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-    const body = `${text}\n\n*From the Arrested Development Wiki, ${doc.license.replace(/\s*\(.*\)$/, "")}.* [Where it came from](${doc.sourceUrl})`;
+    const body = `${doc.text}\n\n*From the Arrested Development Wiki, ${doc.license.replace(/\s*\(.*\)$/, "")}.* [Where it came from](${doc.sourceUrl})`;
     const title = owner ? data.people.find((p) => p.slug === owner)!.displayName : doc.title;
     const existing = owner
       ? await db.article.findUnique({

@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   chunkMarkdown,
+  stripCaptionLeftovers,
   parseSeedDocument,
   resolveDate,
   validateSeed,
@@ -179,6 +180,36 @@ describe("parseSeedDocument", () => {
       license: "CC-BY-SA 3.0",
       text: "Twin.",
     });
+  });
+});
+
+describe("stripCaptionLeftovers", () => {
+  it("removes the tail of a picture caption and keeps the paragraph it ran into", () => {
+    expect(
+      stripCaptionLeftovers(
+        [
+          "## Timidness",
+          "",
+          '"]]',
+          "",
+          "George Michael was timid.",
+          "",
+          '" in "Borderline Personalities"]]Barry is a lawyer.',
+          ' in "Good Grief"]]',
+          "A real [[link]] stays, and so does [[one|other]].",
+        ].join("\n"),
+      ),
+    ).toBe(
+      [
+        "## Timidness",
+        "",
+        "George Michael was timid.",
+        "",
+        "Barry is a lawyer.",
+        "",
+        "A real [[link]] stays, and so does [[one|other]].",
+      ].join("\n"),
+    );
   });
 });
 
