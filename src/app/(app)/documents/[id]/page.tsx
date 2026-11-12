@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Anchor, Badge, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Badge, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { IconArrowLeft, IconDownload, IconPencil } from "@tabler/icons-react";
+import { LinkButton } from "@/components/LinkButton";
+import { KIND_LABELS } from "@/lib/documents/kinds";
 import { describe } from "@/lib/fuzzyDate";
 import { requireActor } from "@/server/auth/session";
 import { getDocument } from "@/server/documents/service";
@@ -8,17 +11,14 @@ import classes from "@/components/photos/PhotoGrid.module.css";
 
 export const metadata: Metadata = { title: "Document · Hopechest" };
 
-const KINDS: Record<string, string> = {
-  record: "Record",
-  letter: "Letter",
-  recipe: "Recipe",
-  story: "Story",
-  article: "Article",
-  other: "Document",
-};
-
-/** A document's text. Uploading and searching documents come with the documents feature. */
-export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
+/** One document: its original, if the chest holds it, and what it says. */
+export default async function DocumentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ already?: string }>;
+}) {
   const actor = await requireActor("read");
   const doc = await getDocument(actor, (await params).id);
   if (!doc) notFound();
@@ -26,13 +26,53 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   return (
     <Container size="md" py="xl">
       <Stack gap="lg">
+        <Group justify="space-between">
+          <LinkButton
+            href="/documents"
+            variant="subtle"
+            size="compact-sm"
+            leftSection={<IconArrowLeft size={14} />}
+            ml={-8}
+          >
+            Documents
+          </LinkButton>
+          <Group gap="xs">
+            {doc.fileUrl && (
+              <LinkButton
+                href={doc.fileUrl}
+                variant="default"
+                size="compact-sm"
+                leftSection={<IconDownload size={14} />}
+                data-testid="document-file"
+              >
+                Original file
+              </LinkButton>
+            )}
+            {doc.canEdit && (
+              <LinkButton
+                href={`/documents/${doc.id}/edit`}
+                variant="default"
+                size="compact-sm"
+                leftSection={<IconPencil size={14} />}
+                data-testid="edit-document"
+              >
+                Edit
+              </LinkButton>
+            )}
+          </Group>
+        </Group>
+        {(await searchParams).already && (
+          <Alert color="yellow" data-testid="document-already">
+            This document was already in the chest, so nothing new was added.
+          </Alert>
+        )}
         <div>
           <Title order={1} data-testid="document-title">
             {doc.title}
           </Title>
           <Group gap="xs" mt={4}>
             <Badge variant="light" tt="none" fw={500} size="lg" data-testid="document-kind">
-              {KINDS[doc.kind] ?? "Document"}
+              {KIND_LABELS[doc.kind] ?? "Document"}
             </Badge>
             <Text c="dimmed" data-testid="document-date">
               {doc.date ? describe(doc.date) : "Date not recorded"}
@@ -69,7 +109,10 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
         <Paper p="lg" radius="md" withBorder bg="var(--hc-surface)">
           <Stack gap="sm" data-testid="document-text" style={{ overflowWrap: "anywhere" }}>
             {doc.text === null && (
-              <Text c="dimmed">The text of this document has not been read yet.</Text>
+              <Text c="dimmed" data-testid="document-no-text">
+                Nobody has typed out what this says yet.
+                {doc.canEdit ? " Choose Edit to add it." : ""}
+              </Text>
             )}
             {(doc.text ?? "")
               .split(/\n{2,}/)

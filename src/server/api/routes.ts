@@ -11,7 +11,13 @@ import {
   listAlbums,
   updateAlbum,
 } from "@/server/albums/service";
-import { getDocument } from "@/server/documents/service";
+import {
+  createDocument,
+  deleteDocument,
+  getDocument,
+  listDocuments,
+  updateDocument,
+} from "@/server/documents/service";
 import {
   createEvent,
   deleteEvent,
@@ -142,6 +148,10 @@ const EVENT_FIELDS =
 const PLACE_FIELDS = "label, street, city, region, country, lat, lng, notes";
 const PHOTO_FIELDS =
   "caption, date (text), photographer, people (list of slugs), albums (list of album ids)";
+const DOCUMENT_FIELDS =
+  'title, kind (letter|record|recipe|story|article|other), date (text, e.g. "1933"), ' +
+  "text (what it says; ## starts a section heading)";
+const BLANK_DOCUMENT = { title: "", kind: "other", date: "", text: "" };
 const ALBUM_FIELDS = "title, description, cover (id of a photo in the album)";
 
 function relation(body: Record<string, unknown>): RelationInput {
@@ -393,12 +403,75 @@ export const ROUTES: readonly ApiRoute[] = [
   // ── documents ──
   {
     method: "GET",
+    path: "documents",
+    needs: "read",
+    summary:
+      "Documents by title, or with ?q= the ones whose words match, best first, each with an excerpt. ?kind= narrows.",
+    run: async ({ actor, query }) =>
+      ok(
+        await listDocuments(actor, {
+          q: query.get("q") ?? undefined,
+          kind: query.get("kind") ?? undefined,
+        }),
+      ),
+  },
+  {
+    method: "POST",
+    path: "documents",
+    needs: "write",
+    summary: "Add a document from its text. The same text added twice gives the one already there.",
+    fields: DOCUMENT_FIELDS,
+    run: async ({ actor, body }) => {
+      const result = await createDocument(actor, mergeText(BLANK_DOCUMENT, body));
+      if (!result.ok) return invalid(result);
+      return ok(
+        { document: await getDocument(actor, result.id), duplicate: result.duplicate },
+        result.duplicate ? 200 : 201,
+      );
+    },
+  },
+  {
+    method: "GET",
     path: "documents/:id",
     needs: "read",
     summary: "One document: its title, kind, date, full text and how to cite it.",
     run: async ({ actor, params }) => {
       const document = await getDocument(actor, params.id);
       return document ? ok({ document }) : missing("document");
+    },
+  },
+
+  {
+    method: "PATCH",
+    path: "documents/:id",
+    needs: "write",
+    summary: "Change a document's details, or set its text (to type out a scanned page).",
+    fields: DOCUMENT_FIELDS,
+    run: async ({ actor, params, body }) => {
+      const doc = await getDocument(actor, params.id);
+      if (!doc) return missing("document");
+      const result = await updateDocument(
+        actor,
+        params.id,
+        mergeText(
+          { title: doc.title, kind: doc.kind, date: dateToText(doc.date), text: doc.text ?? "" },
+          body,
+        ),
+      );
+      if (!result.ok) return invalid(result);
+      return ok({ document: await getDocument(actor, params.id) });
+    },
+  },
+  {
+    method: "DELETE",
+    path: "documents/:id",
+    needs: "write",
+    summary: "Delete a document. Refused while recorded facts cite it.",
+    run: async ({ actor, params }) => {
+      if (!(await getDocument(actor, params.id))) return missing("document");
+      const result = await deleteDocument(actor, params.id);
+      if (!result.ok) return { status: 409, body: { error: "cited", message: result.message } };
+      return ok({ ok: true });
     },
   },
 
