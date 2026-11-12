@@ -28,17 +28,21 @@ export function PageFacts({
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [reading, setReading] = useState(justSaved);
 
-  // The page is read after a save without holding the save up; look again shortly.
+  // The page is read after a save without holding the save up, so look again
+  // shortly. Only while nothing has arrived: once suggestions are showing, a
+  // late refresh could land on top of someone's Accept and show the page as it
+  // was before.
+  const waiting = justSaved && reading && claims.length === 0;
   useEffect(() => {
-    if (!justSaved) return;
-    const timers = [4000, 10000, 20000].map((wait, index, all) =>
+    if (!waiting) return;
+    const timers = [3000, 7000, 13000, 21000].map((wait, index, all) =>
       setTimeout(() => {
         router.refresh();
         if (index === all.length - 1) setReading(false);
       }, wait),
     );
     return () => timers.forEach(clearTimeout);
-  }, [justSaved, router]);
+  }, [waiting, router]);
 
   return (
     <Stack gap="sm" mt="md" data-testid="page-facts" data-ready={ready}>
@@ -73,7 +77,7 @@ export function PageFacts({
         >
           Look for facts in this page
         </Button>
-        {reading && claims.length === 0 && !result && (
+        {waiting && !result && (
           <Text fz="sm" c="dimmed" data-testid="page-facts-reading">
             Reading what you wrote for dates and events to record…
           </Text>

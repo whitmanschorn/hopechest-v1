@@ -256,6 +256,8 @@ export default async function PersonPage({
           </Group>
           {article?.exists && article.canEdit && (
             <PageFacts
+              // A new version of the page starts the watching afresh.
+              key={article.revisionId}
               slug={person.slug}
               justSaved={justSaved}
               claims={suggested.map((claim) => ({
