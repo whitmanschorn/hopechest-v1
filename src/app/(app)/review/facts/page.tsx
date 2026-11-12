@@ -80,7 +80,9 @@ export default async function FactsPage({
                     citation: claim.source.citation,
                     href: claim.source.documentId
                       ? `/documents/${claim.source.documentId}`
-                      : claim.source.url,
+                      : claim.source.url?.startsWith("/")
+                        ? claim.source.url
+                        : null,
                   },
                   proposedBy: claim.proposedBy,
                   proposedOn: day.format(claim.proposedAt),

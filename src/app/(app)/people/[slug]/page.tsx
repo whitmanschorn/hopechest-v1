@@ -8,6 +8,8 @@ import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
 import { PhotoGrid } from "@/components/photos/PhotoGrid";
 import { ArticleBody } from "@/components/wiki/ArticleBody";
+import { PageFacts } from "@/components/wiki/PageFacts";
+import { ACTION_LABELS, describeArgs } from "@/lib/claims/actions";
 import { PersonAvatar, PersonCard } from "@/components/people/PersonCard";
 import { RemoveRelationship } from "@/components/people/RemoveRelationship";
 import { describe } from "@/lib/fuzzyDate";
@@ -21,6 +23,8 @@ import {
   type Relative,
 } from "@/server/people/service";
 import { listPhotos } from "@/server/photos/service";
+import { listClaims } from "@/server/claims/service";
+import { pageSourceUrl } from "@/server/facts/suggest";
 import { getArticle, linkTargets } from "@/server/wiki/service";
 
 const day = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
@@ -57,13 +61,26 @@ function Section({
   );
 }
 
-export default async function PersonPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PersonPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ reading?: string }>;
+}) {
   const actor = await requireActor("read");
   const { slug } = await params;
   const person = await getPerson(actor, slug);
   if (!person) notFound();
   const articleRef = { kind: "person" as const, slug: person.slug };
-  const [article, targets] = await Promise.all([getArticle(actor, articleRef), linkTargets(actor)]);
+  const [article, targets, suggested] = await Promise.all([
+    getArticle(actor, articleRef),
+    linkTargets(actor),
+    can(actor, "write")
+      ? listClaims(actor, { sourceUrl: pageSourceUrl(person.slug) }).then((found) => found.claims)
+      : [],
+  ]);
+  const justSaved = Boolean((await searchParams).reading);
   const canWrite = can(actor, "write");
   const photos = await listPhotos(actor, { person: person.slug });
   const options = canWrite
@@ -237,6 +254,27 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               </LinkButton>
             )}
           </Group>
+          {article?.exists && article.canEdit && (
+            <PageFacts
+              slug={person.slug}
+              justSaved={justSaved}
+              claims={suggested.map((claim) => ({
+                id: claim.id,
+                status: claim.status,
+                statement: claim.statement,
+                actionLabel: ACTION_LABELS[claim.action] ?? claim.action,
+                lines: describeArgs(claim.args),
+                quote: claim.quote,
+                source: null,
+                hideSource: true,
+                proposedBy: claim.proposedBy,
+                proposedOn: day.format(claim.proposedAt),
+                reviewedBy: claim.reviewedBy,
+                reviewNote: claim.reviewNote,
+                appliedHref: claim.appliedHref,
+              }))}
+            />
+          )}
         </Section>
 
         <Section title="Family" testId="person-family">

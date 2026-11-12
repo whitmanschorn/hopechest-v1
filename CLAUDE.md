@@ -145,6 +145,10 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Accepting runs the action's own REST route as the reviewer and records the row it made. That
   link is what gives an event or person its sources (`src/server/sources.ts`).
 - A new kind of proposable change is a new entry in `CLAIM_ACTIONS` naming an existing tool.
+- The model is reached only through `getLlm()` (`src/server/llm/`). It is DeepSeek with a key and
+  a scripted stand-in without one (never in production); specs run against the stand-in.
+- What a model says is never trusted as it comes: `readFacts` (`src/lib/facts/prompt.ts`) keeps
+  only facts a program can check, and they are proposed, not recorded.
 
 ## UI
 

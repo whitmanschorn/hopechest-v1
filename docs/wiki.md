@@ -50,8 +50,8 @@ The prose and the recorded facts are separate on purpose. Kinship ("who is grand
 questions ("when were they married?") are answered from the record: people, relationships,
 events. The wiki is where the family tells the story around them.
 
-Next: when someone writes "born in Sturgeon Bay in 1931" on a page, offering to record it, with
-the page as its source. That uses the proposed-facts queue (`docs/facts.md`).
+When someone writes "born in Sturgeon Bay in 1931" on a person's page, the page offers to record
+it, with the page as its source. `docs/facts.md` describes how.
 
 ## For programs and assistants
 

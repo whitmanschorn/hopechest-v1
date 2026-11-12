@@ -126,6 +126,8 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             <Text key={source.id} data-testid="event-source">
               {source.documentId ? (
                 <TextLink href={`/documents/${source.documentId}`}>{source.citation}</TextLink>
+              ) : source.url?.startsWith("/") ? (
+                <TextLink href={source.url}>{source.citation}</TextLink>
               ) : (
                 source.citation
               )}

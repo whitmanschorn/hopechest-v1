@@ -113,7 +113,7 @@ async function withLinks(claims: ClaimView[]): Promise<ClaimView[]> {
 
 export async function listClaims(
   actor: Actor,
-  options: { status?: string } = {},
+  options: { status?: string; sourceUrl?: string } = {},
 ): Promise<{ claims: ClaimView[]; waiting: number }> {
   assertCan(actor, "write");
   const wanted = (options.status ?? "proposed").toLowerCase();
@@ -121,7 +121,10 @@ export async function listClaims(
   const db = getDb();
   const [rows, waiting] = await Promise.all([
     db.claim.findMany({
-      where: { status: status.toUpperCase() as Uppercase<ClaimStatusName> },
+      where: {
+        status: status.toUpperCase() as Uppercase<ClaimStatusName>,
+        ...(options.sourceUrl ? { source: { url: options.sourceUrl } } : {}),
+      },
       orderBy: status === "proposed" ? { createdAt: "asc" } : { reviewedAt: "desc" },
       take: 200,
       include,
@@ -153,6 +156,8 @@ export interface ProposeInput {
   confidence?: number;
   /** Name of the model or assistant proposing, when it is not a person. */
   agent?: string;
+  /** A page of the chest the fact was read from (a wiki page), instead of a document. */
+  page?: { url: string; citation: string };
 }
 
 const toolFor = (action: ClaimAction) => TOOLS.find((tool) => tool.name === action)!;
@@ -208,6 +213,18 @@ export async function proposeClaim(
     }
   }
   if (Object.keys(errors).length > 0) return { ok: false, errors };
+  if (!sourceId && input.page) {
+    // What the family wrote themselves counts as their testimony.
+    const { url, citation } = input.page;
+    const found = await db.source.findFirst({
+      where: { kind: "TESTIMONY", url },
+      select: { id: true },
+    });
+    sourceId =
+      found?.id ??
+      (await db.source.create({ data: { kind: "TESTIMONY", url, citation }, select: { id: true } }))
+        .id;
+  }
 
   const quote = input.quote?.trim().slice(0, MAX_QUOTE_LENGTH);
   const claim = await db.claim.create({
@@ -217,7 +234,8 @@ export async function proposeClaim(
       payload: { args: input.args as object, ...(quote ? { quote } : {}) },
       confidence: confidence ?? null,
       sourceId,
-      ...(actor.kind === "user"
+      // A model's proposal is the model's, even when a member set it going.
+      ...(actor.kind === "user" && !input.agent
         ? { createdByUserId: actor.userId }
         : { createdByAgent: input.agent?.trim().slice(0, 80) || "An assistant" }),
     },

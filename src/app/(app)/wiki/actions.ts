@@ -1,8 +1,11 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { historyPath, viewPath } from "@/lib/wiki/paths";
 import { requireActor } from "@/server/auth/session";
+import { suggestFromPersonPage } from "@/server/facts/suggest";
 import {
   deleteArticle,
   restoreRevision,
@@ -43,6 +46,16 @@ export async function saveArticleAction(
     ...(form.has("base") ? { base: String(form.get("base")) || null } : {}),
   });
   if (!result.ok) return { ...state, errors: result.errors };
+  if (result.ref.kind === "person" && result.changed) {
+    const { slug } = result.ref;
+    // After the answer has gone out, so saving is never slowed by the model.
+    after(() =>
+      suggestFromPersonPage(actor, slug).catch((error) =>
+        console.error("Reading facts after a save failed", slug, error),
+      ),
+    );
+    redirect(`${viewPath(result.ref)}?reading=1`);
+  }
   redirect(viewPath(result.ref));
 }
 
@@ -60,4 +73,12 @@ export async function deleteArticleAction(form: FormData): Promise<void> {
   if (!ref) return;
   await deleteArticle(actor, ref);
   redirect(ref.kind === "person" ? viewPath(ref) : "/wiki");
+}
+
+/** Reads a person's page for facts now, and says what it found. */
+export async function suggestFactsAction(slug: string): Promise<{ ok: boolean; message: string }> {
+  const actor = await requireActor("write");
+  const result = await suggestFromPersonPage(actor, slug);
+  refresh();
+  return { ok: result.ok, message: result.message };
 }
