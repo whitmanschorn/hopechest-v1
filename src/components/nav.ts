@@ -4,6 +4,7 @@ import {
   IconMap,
   IconMapPin,
   IconPhoto,
+  IconSettings,
   IconTimeline,
   IconUserShield,
   IconUsers,
@@ -32,4 +33,5 @@ export const NAV: readonly NavItem[] = [
   { href: "/places", label: "Places", icon: IconMapPin },
   { href: "/map", label: "Map", icon: IconMap },
   { href: "/members", label: "Members", icon: IconUserShield, needs: "admin" },
+  { href: "/settings", label: "Settings", icon: IconSettings, needs: "admin" },
 ];

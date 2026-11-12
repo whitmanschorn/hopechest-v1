@@ -93,6 +93,15 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Server components cannot pass `component={Link}` to Mantine; use
   `src/components/LinkButton.tsx` or `src/components/TextLink.tsx`.
 
+## API
+
+- `/api/v1` is the REST API for programs (`docs/api.md`). It is one table of routes in
+  `src/server/api/routes.ts`, each a thin wrapper over a service function; `GET /api/v1` lists
+  them. A new operation is a new entry there plus coverage in `e2e/api.spec.ts`.
+- Callers send an API key (`Authorization: Bearer hc_...`) made by an admin under Settings
+  (`src/server/apiKeys/`). A key is an `Actor` of kind `apiKey`, so services treat it like anyone
+  else. Never check a key's scopes in a route.
+
 ## UI
 
 - Signed-in pages render inside `src/components/AppFrame.tsx`. Add a page's menu entry to
