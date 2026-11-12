@@ -20,6 +20,15 @@ async function headingPicture(page: Page) {
   return picture;
 }
 
+/**
+ * Saving crops in the browser, uploads, re-encodes and redraws the whole
+ * layout, then moves to the person's page. Give that longer than one click.
+ */
+async function backOnPersonPage(page: Page, name: string) {
+  await expect(page).toHaveURL(/\/people\/[^/]+$/, { timeout: 20_000 });
+  await expect(shown(page, "person-name")).toHaveText(name);
+}
+
 const editor = (page: Page) =>
   page.locator('[data-testid="picture-editor"][data-ready="true"]').filter({ visible: true });
 
@@ -49,7 +58,7 @@ test("upload a picture, place it in the circle, save it, then remove it", async 
   await expect(image).not.toHaveCSS("left", before);
 
   await shown(page, "picture-save").click();
-  await expect(shown(page, "person-name")).toHaveText(name);
+  await backOnPersonPage(page, name);
   const picture = await headingPicture(page);
   expect(await picture.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(512);
   expect(await picture.evaluate((element: HTMLImageElement) => element.naturalHeight)).toBe(512);
@@ -61,7 +70,7 @@ test("upload a picture, place it in the circle, save it, then remove it", async 
   await page.goBack();
   await shown(page, "change-picture").click();
   await shown(page, "picture-remove").click();
-  await expect(shown(page, "person-name")).toHaveText(name);
+  await backOnPersonPage(page, name);
   await expect(shown(page, "person-picture").locator("img")).toHaveCount(0);
 });
 
@@ -95,7 +104,7 @@ test("choose a profile picture from the photos someone is tagged in", async ({ p
   await expect(shown(page, "picture-window")).toBeVisible();
   await shown(page, "picture-save").click();
 
-  await expect(shown(page, "person-name")).toHaveText(name);
+  await backOnPersonPage(page, name);
   const picture = await headingPicture(page);
   expect(await picture.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(512);
 });
