@@ -1,6 +1,6 @@
-import { execFile } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 import { signIn } from "./support/auth";
+import { hopechest } from "./support/cli";
 import { shown } from "./support/page";
 
 const unique = (name: string) =>
@@ -13,46 +13,6 @@ async function makeKey(page: Page, access: "read" | "write"): Promise<string> {
   await shown(page, "create-api-key").click();
   await expect(shown(page, "new-api-key")).toBeVisible();
   return shown(page, "new-api-key-value").inputValue();
-}
-
-interface Run {
-  code: number;
-  stdout: string;
-  stderr: string;
-  /** What it printed, read as JSON (null if it was not JSON). */
-  // Answers are free-form JSON; each test asserts on the shape it expects.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  json: any;
-}
-
-/**
- * Runs the real command-line tool as its own process, pointed at the server
- * under test as a deployment called "spec".
- */
-function hopechest(baseURL: string, key: string | null, ...args: string[]): Promise<Run> {
-  const env: Record<string, string | undefined> = {
-    PATH: process.env.PATH,
-    HOPECHEST_TARGET: "spec",
-    HOPECHEST_SPEC_URL: baseURL,
-    ...(key ? { HOPECHEST_SPEC_API_KEY: key } : {}),
-  };
-  return new Promise((resolve) => {
-    execFile(
-      "./cli/hopechest.ts",
-      args,
-      { env: env as NodeJS.ProcessEnv },
-      (error, stdout, stderr) => {
-        let json = null;
-        try {
-          json = JSON.parse(stdout);
-        } catch {
-          // Help text, or nothing.
-        }
-        const code = error ? (typeof error.code === "number" ? error.code : 1) : 0;
-        resolve({ code, stdout, stderr, json });
-      },
-    );
-  });
 }
 
 test("the command-line tool explains itself without a key or a server @smoke", async ({

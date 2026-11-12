@@ -24,15 +24,17 @@ Revoking a key on the Settings page stops it at once.
 That listing is generated from the route table in `src/server/api/routes.ts`, so it is never out
 of date. In short:
 
-| Area   | Routes                                                                                |
-| ------ | ------------------------------------------------------------------------------------- |
-| People | list and search, get, add, change, history, add a relationship, remove a relationship |
-| Events | list (by kind, person or place), get with its sources, add, change, delete            |
-| Places | list, get, add, change, delete                                                        |
-| Photos | list (optionally one person's), get, change details, delete                           |
-| Albums | list, get, add, change, delete                                                        |
+| Area   | Routes                                                                                 |
+| ------ | -------------------------------------------------------------------------------------- |
+| People | list and search, get, add, change, history, add a relationship, remove a relationship  |
+| Events | list (by kind, person or place), get with its sources, add, change, delete             |
+| Places | list, get, add, change, delete                                                         |
+| Photos | list (optionally one person's), get, change details, delete                            |
+| Albums | list, get, add, change, delete                                                         |
+| Ingest | start a batch, add a file to it, finish it; list, date, publish and discard for review |
 
-Uploading photos and documents through the API comes with the ingest work.
+Photos are uploaded in bulk through the ingest routes, which the `hopechest ingest` command drives
+(`docs/ingest.md`). Documents come next.
 
 ## Conventions
 

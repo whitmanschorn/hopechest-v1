@@ -32,6 +32,8 @@ export interface PhotoDetail extends PhotoCard {
   albums: { id: string; title: string }[];
   uploadedBy: string | null;
   uploadedAt: Date;
+  /** True while it sits in the review queue, unseen by the rest of the family. */
+  waiting: boolean;
   /** Whether the signed-in person may edit or delete it. */
   canEdit: boolean;
 }
@@ -118,8 +120,11 @@ export async function getPhoto(actor: Actor, id: string): Promise<PhotoDetail | 
     },
   });
   if (!photo) return null;
+  // A photo still in the review queue is only for the people who review.
+  if (photo.status !== "PUBLISHED" && !can(actor, "write")) return null;
   return {
     ...toCard(photo),
+    waiting: photo.status !== "PUBLISHED",
     displayUrl: photo.displayUrl,
     originalUrl: photo.originalUrl,
     originalFilename: photo.originalFilename,
@@ -153,11 +158,12 @@ export type RegisterResult =
 /**
  * Turns a freshly uploaded original into a photo: checks it is an image,
  * makes the smaller copies, reads the camera date, and records it. The same
- * file uploaded twice gives the photo already in the chest.
+ * file uploaded twice gives the photo already in the chest. With `review`,
+ * the photo waits in the review queue instead of showing straight away.
  */
 export async function registerPhoto(
   actor: Actor,
-  input: { key: string; filename?: string; albumId?: string },
+  input: { key: string; filename?: string; albumId?: string; review?: boolean },
 ): Promise<RegisterResult> {
   assertCan(actor, "write");
   if (!isOriginalKey(input.key)) return { ok: false, message: "That upload could not be found." };
@@ -205,6 +211,8 @@ export async function registerPhoto(
         bytes: original.byteLength,
         originalFilename: input.filename?.slice(0, 200) || null,
         uploadedById: actor.kind === "user" ? actor.userId : null,
+        // Bulk arrivals wait in the review queue; a single upload shows at once.
+        status: input.review ? "NEEDS_REVIEW" : "PUBLISHED",
         exif: image.exif ?? undefined,
         ...toColumns(image.taken),
       },

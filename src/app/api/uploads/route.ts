@@ -1,11 +1,12 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { IMAGE_TYPES, isOriginalKey, MAX_UPLOAD_BYTES, originalKey } from "@/lib/photos/keys";
 import { can } from "@/server/actor";
-import { currentActor } from "@/server/auth/session";
+import { actorFromRequest } from "@/server/api/http";
 import { getStorage } from "@/server/storage";
 
-async function uploader() {
-  const actor = await currentActor();
+/** A signed-in member, or a program with an API key, who may add photos. */
+async function uploader(request: Request) {
+  const actor = await actorFromRequest(request);
   return actor && can(actor, "write") ? actor : null;
 }
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       request,
       body,
       onBeforeGenerateToken: async (pathname) => {
-        if (!(await uploader())) throw new Error("Not allowed");
+        if (!(await uploader(request))) throw new Error("Not allowed");
         if (!isOriginalKey(pathname)) throw new Error("Unexpected file name");
         return {
           allowedContentTypes: Object.keys(IMAGE_TYPES),
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const storage = getStorage();
   if (storage.kind !== "local") return new Response("Not available here", { status: 404 });
-  if (!(await uploader())) return new Response("Not allowed", { status: 401 });
+  if (!(await uploader(request))) return new Response("Not allowed", { status: 401 });
 
   const id = new URL(request.url).searchParams.get("id") ?? "";
   const contentType = request.headers.get("content-type")?.split(";")[0] ?? "";

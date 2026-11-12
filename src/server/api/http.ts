@@ -14,7 +14,7 @@ const problem = (status: number, error: string, message: string) =>
  * Who is calling: the owner of the key in `Authorization: Bearer hc_...`, or
  * failing that the signed-in member (so the API can be explored in a browser).
  */
-async function actorFromRequest(request: Request): Promise<Actor | null> {
+export async function actorFromRequest(request: Request): Promise<Actor | null> {
   const header = request.headers.get("authorization");
   if (header) {
     const [scheme, key] = header.split(/\s+/, 2);

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { Alert, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { IconArrowLeft, IconDownload } from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { PhotoForm } from "@/components/photos/PhotoForm";
@@ -73,6 +73,13 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
           tags={photo.people}
           canEdit={photo.canEdit}
         />
+
+        {photo.waiting && (
+          <Alert color="yellow" data-testid="photo-waiting">
+            This photo is waiting for review. Only people who can add photos see it until it is
+            published.
+          </Alert>
+        )}
 
         <Stack gap={4}>
           <Title order={1} fz="h3" data-testid="photo-caption">

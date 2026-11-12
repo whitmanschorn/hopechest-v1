@@ -343,4 +343,45 @@ export const TOOLS: readonly McpTool[] = [
     route: "DELETE albums/:id",
     input: { id: id("the album") },
   },
+
+  // ── reviewing bulk arrivals ──
+  {
+    name: "list_ingest_batches",
+    title: "List batches of arrivals",
+    description:
+      "Batches of files brought in in bulk (a box of slide scans, a Facebook export), newest first, with how many photos in each still wait for review before the family can see them.",
+    route: "GET ingest/batches",
+    input: {},
+  },
+  {
+    name: "get_ingest_batch",
+    title: "Get a batch",
+    description:
+      "One batch: its photos waiting for review, with what could not be applied from the details that came with each file, and the files that failed. Caption or tag a waiting photo with update_photo.",
+    route: "GET ingest/batches/:id",
+    input: { id: id("the batch") },
+  },
+  {
+    name: "date_ingest_photos",
+    title: "Date waiting photos",
+    description:
+      'Give the same date to several waiting photos of a batch, e.g. "everything in this box is from 1974".',
+    route: "POST ingest/batches/:id/date",
+    input: {
+      id: id("the batch"),
+      photos: z.array(z.string()).describe("Ids of the waiting photos"),
+      date: z.string().describe('The date as a person would write it: "1974", "around 1974"'),
+    },
+  },
+  {
+    name: "publish_ingest_photos",
+    title: "Publish waiting photos",
+    description:
+      "Let the family see a batch's waiting photos. Leave `photos` out to publish all of them. Only do this when the person you are helping has asked for it.",
+    route: "POST ingest/batches/:id/publish",
+    input: {
+      id: id("the batch"),
+      photos: z.array(z.string()).optional().describe("Ids of the photos; leave out for all"),
+    },
+  },
 ];

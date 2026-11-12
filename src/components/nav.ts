@@ -1,5 +1,6 @@
 import {
   IconBooks,
+  IconChecklist,
   IconHome,
   IconMap,
   IconMapPin,
@@ -32,6 +33,7 @@ export const NAV: readonly NavItem[] = [
   { href: "/timeline", label: "Timeline", icon: IconTimeline },
   { href: "/places", label: "Places", icon: IconMapPin },
   { href: "/map", label: "Map", icon: IconMap },
+  { href: "/review", label: "Review", icon: IconChecklist, needs: "write" },
   { href: "/members", label: "Members", icon: IconUserShield, needs: "admin" },
   { href: "/settings", label: "Settings", icon: IconSettings, needs: "admin" },
 ];

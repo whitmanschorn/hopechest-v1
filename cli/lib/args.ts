@@ -13,17 +13,27 @@ export interface CommandLine {
   /** A whole JSON body given with --body. */
   body?: Record<string, unknown>;
   help: boolean;
+  /** Options only some commands take (see COMMAND_OPTIONS), by name. */
+  options: Record<string, string>;
   command?: string;
   /** What follows the command: positional words and name=value pairs, in order. */
   rest: string[];
 }
 
+/** Options of `hopechest ingest`: those that take a value, and those that do not. */
+export const COMMAND_OPTIONS = {
+  values: ["label", "source", "date", "album", "photographer", "people"],
+  flags: ["dry-run"],
+} as const;
+
 /** Splits the words after `hopechest` into options, the command and its arguments. */
 export function parseCommandLine(argv: readonly string[]): CommandLine {
-  const line: CommandLine = { help: false, rest: [] };
+  const line: CommandLine = { help: false, options: {}, rest: [] };
+  const values: readonly string[] = COMMAND_OPTIONS.values;
+  const flags: readonly string[] = COMMAND_OPTIONS.flags;
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
-    const option = /^--?([a-z]+)(?:=(.*))?$/.exec(word);
+    const option = /^--?([a-z][a-z-]*)(?:=(.*))?$/.exec(word);
     if (!option) {
       if (line.command === undefined) line.command = word;
       else line.rest.push(word);
@@ -34,13 +44,18 @@ export function parseCommandLine(argv: readonly string[]): CommandLine {
       line.help = true;
       continue;
     }
-    if (name !== "env" && name !== "e" && name !== "body") {
+    if (flags.includes(name)) {
+      line.options[name] = "yes";
+      continue;
+    }
+    if (name !== "env" && name !== "e" && name !== "body" && !values.includes(name)) {
       throw new UsageError(`Unknown option ${word}.`);
     }
     const value = inline ?? argv[++index];
     if (value === undefined) throw new UsageError(`${word} needs a value.`);
     if (name === "body") line.body = parseBody(value);
-    else line.env = value;
+    else if (name === "env" || name === "e") line.env = value;
+    else line.options[name] = value;
   }
   return line;
 }

@@ -109,6 +109,14 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - `hopechest` (`cli/`, `docs/cli.md`) is the command-line tool. It calls `/api/v1` with a key and
   has one command per MCP tool, taken from the same list. Run it with `npm run hopechest -- help`.
 
+## Ingest
+
+- Bulk arrivals are batches (`src/server/ingest/`, `docs/ingest.md`). `hopechest ingest <folder>`
+  sends a folder; its photos get status `NEEDS_REVIEW` and show only on `/review` until published.
+- Anything that lists photos for the family must filter on `status: "PUBLISHED"`.
+- Every source (scans, Facebook) is first turned into a folder of pictures with JSON sidecars
+  (`src/lib/ingest/sidecar.ts`), so there is one way in.
+
 ## UI
 
 - Signed-in pages render inside `src/components/AppFrame.tsx`. Add a page's menu entry to
