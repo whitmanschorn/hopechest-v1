@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Code, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { countLabels, sourceLabel } from "@/lib/ingest/labels";
 import { requireActor } from "@/server/auth/session";
+import { listClaims } from "@/server/claims/service";
 import { listBatches } from "@/server/ingest/service";
 import classes from "@/components/review/ReviewBoard.module.css";
 
@@ -12,7 +14,7 @@ const day = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 export default async function ReviewPage() {
   const actor = await requireActor("write");
-  const batches = await listBatches(actor);
+  const [batches, { waiting }] = await Promise.all([listBatches(actor), listClaims(actor)]);
   return (
     <Container size="md" py="xl">
       <Stack gap="lg">
@@ -25,6 +27,8 @@ export default async function ReviewPage() {
             publish them.
           </Text>
         </div>
+
+        <ReviewTabs current="arrivals" waitingFacts={waiting} />
 
         {batches.length === 0 ? (
           <Paper withBorder p="lg" data-testid="review-empty">

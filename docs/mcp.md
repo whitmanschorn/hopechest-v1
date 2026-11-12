@@ -40,6 +40,12 @@ The marriage question goes like this:
 
 `e2e/mcp.spec.ts` runs exactly these steps through a real MCP client.
 
+## Proposing instead of writing
+
+`propose_fact` puts a fact in a queue for a family member to accept or reject (`docs/facts.md`).
+Assistants are told to use it for anything read out of a document or worked out, giving the
+document and quoting its words.
+
 ## How it is built
 
 - `src/server/mcp/tools.ts` is the list of tools. Each names one route of the REST table

@@ -387,6 +387,44 @@ export const TOOLS: readonly McpTool[] = [
     },
   },
 
+  // ── proposing facts ──
+  {
+    name: "propose_fact",
+    title: "Propose a fact",
+    description:
+      "Put a fact in the queue for a family member to accept or reject, instead of writing it straight in. Use this for anything you read out of a document or worked out yourself, and whenever you are not certain. `action` names one of the tools that change the chest and `args` is exactly what that tool takes. Give the document it came from and quote the words. Nothing changes until a person accepts it.",
+    route: "POST claims",
+    input: {
+      statement: z
+        .string()
+        .describe(
+          'The fact in plain words, e.g. "George Sr. and Lucille married on 13 February 1965"',
+        ),
+      action: z.enum([
+        "add_person",
+        "update_person",
+        "add_relationship",
+        "add_event",
+        "update_event",
+        "add_place",
+        "update_place",
+      ]),
+      args: z.record(z.string(), z.unknown()).describe("What the tool named by `action` takes"),
+      document: z.string().optional().describe("Id of the document the fact was read from"),
+      quote: z.string().optional().describe("The words in the document that say so, exactly"),
+      confidence: z.number().min(0).max(1).optional().describe("How sure you are, 0 to 1"),
+      agent: z.string().optional().describe("Your name, e.g. the model you are"),
+    },
+  },
+  {
+    name: "list_proposed_facts",
+    title: "List proposed facts",
+    description:
+      "Facts waiting for a person to decide, oldest first. Check this before proposing, so the same fact is not proposed twice. `status` accepted or rejected lists past decisions.",
+    route: "GET claims",
+    input: { status: z.enum(["proposed", "accepted", "rejected"]).optional() },
+  },
+
   // ── reviewing bulk arrivals ──
   {
     name: "list_ingest_batches",
