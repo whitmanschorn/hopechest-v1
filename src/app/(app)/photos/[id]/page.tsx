@@ -11,6 +11,7 @@ import { TextLink } from "@/components/TextLink";
 import { describe } from "@/lib/fuzzyDate";
 import { requireActor } from "@/server/auth/session";
 import { listPersonOptions } from "@/server/people/service";
+import { listAlbumOptions } from "@/server/albums/service";
 import { getPhoto } from "@/server/photos/service";
 import { getPhotoTalk } from "@/server/photos/talk";
 
@@ -22,8 +23,9 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
   const actor = await requireActor("read");
   const photo = await getPhoto(actor, (await params).id);
   if (!photo) notFound();
-  const [people, talk] = await Promise.all([
+  const [people, albums, talk] = await Promise.all([
     photo.canEdit ? listPersonOptions(actor) : [],
+    photo.canEdit ? listAlbumOptions(actor) : [],
     getPhotoTalk(actor, photo.id),
   ]);
 
@@ -93,6 +95,19 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
               ))}
             </Text>
           )}
+          {photo.albums.length > 0 && (
+            <Text data-testid="photo-albums">
+              In{" "}
+              {photo.albums.map((album, index) => (
+                <span key={album.id}>
+                  {index > 0 && ", "}
+                  <TextLink href={`/albums/${album.id}`} inherit>
+                    {album.title}
+                  </TextLink>
+                </span>
+              ))}
+            </Text>
+          )}
           <Text c="dimmed" fz="sm">
             Added {photo.uploadedBy ? `by ${photo.uploadedBy} ` : ""}on{" "}
             {DAY.format(photo.uploadedAt)}
@@ -115,11 +130,13 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
             <PhotoForm
               id={photo.id}
               people={people}
+              albums={albums}
               initial={{
                 caption: photo.caption ?? "",
                 date: dateText,
                 photographer: photo.photographer ?? "",
                 people: photo.people.map((person) => person.slug),
+                albums: photo.albums.map((album) => album.id),
               }}
             />
           </Paper>

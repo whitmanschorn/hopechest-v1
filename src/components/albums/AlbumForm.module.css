@@ -1,0 +1,72 @@
+.covers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--mantine-spacing-xs);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--hc-hairline);
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The radio button is still there for keyboards and screen readers. */
+.cover input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cover:has(input:checked) {
+  box-shadow: 0 0 0 3px var(--mantine-primary-color-filled);
+}
+
+.cover:has(input:focus-visible) {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 3px;
+}
+
+.card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--mantine-radius-md);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 3px;
+}
+
+.cardCover {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  background-color: var(--hc-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mantine-color-dimmed);
+}
+
+.cardCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

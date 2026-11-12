@@ -78,6 +78,11 @@ export function PhotoStage({
           data-testid="photo-stage"
           data-show={show || marking !== null}
           data-marking={marking !== null}
+          // As wide as fits, but never taller than most of the screen.
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            width: `min(100%, ${width}px, calc(78vh * ${width / height}))`,
+          }}
           onPointerDown={(event) => {
             if (!marking || saving) return;
             event.preventDefault();

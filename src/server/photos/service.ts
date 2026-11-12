@@ -29,13 +29,14 @@ export interface PhotoDetail extends PhotoCard {
   place: { slug: string; label: string } | null;
   /** Who is in it, and where in the picture if that has been marked. */
   people: { slug: string; displayName: string; box: Box | null }[];
+  albums: { id: string; title: string }[];
   uploadedBy: string | null;
   uploadedAt: Date;
   /** Whether the signed-in person may edit or delete it. */
   canEdit: boolean;
 }
 
-const cardFields = {
+export const cardFields = {
   id: true,
   thumbUrl: true,
   width: true,
@@ -53,7 +54,7 @@ const cardFields = {
 type CardRow = Parameters<typeof fromColumns>[0] &
   Pick<PhotoCard, "id" | "thumbUrl" | "width" | "height" | "caption">;
 
-const toCard = (row: CardRow): PhotoCard => ({
+export const toCard = (row: CardRow): PhotoCard => ({
   id: row.id,
   thumbUrl: row.thumbUrl,
   width: row.width,
@@ -109,6 +110,10 @@ export async function getPhoto(actor: Actor, id: string): Promise<PhotoDetail | 
         include: { person: { select: { slug: true, displayName: true } } },
         orderBy: { createdAt: "asc" },
       },
+      albums: {
+        select: { album: { select: { id: true, title: true } } },
+        orderBy: { album: { title: "asc" } },
+      },
       uploadedBy: { select: { person: { select: { displayName: true } } } },
     },
   });
@@ -121,10 +126,25 @@ export async function getPhoto(actor: Actor, id: string): Promise<PhotoDetail | 
     photographer: photo.photographer,
     place: photo.place,
     people: photo.people.map((tag) => ({ ...tag.person, box: boxFromColumns(tag) })),
+    albums: photo.albums.map((entry) => entry.album),
     uploadedBy: photo.uploadedBy?.person?.displayName ?? null,
     uploadedAt: photo.createdAt,
     canEdit: can(actor, "write"),
   };
+}
+
+/** Puts a photo at the end of an album. Quietly does nothing if the album is gone. */
+async function addToAlbum(photoId: string, albumId: string | undefined): Promise<void> {
+  if (!albumId || !UUID.test(albumId)) return;
+  const db = getDb();
+  const album = await db.album.findUnique({ where: { id: albumId }, select: { id: true } });
+  if (!album) return;
+  const last = await db.albumPhoto.aggregate({ where: { albumId }, _max: { position: true } });
+  await db.albumPhoto.upsert({
+    where: { albumId_photoId: { albumId, photoId } },
+    create: { albumId, photoId, position: (last._max.position ?? -1) + 1 },
+    update: {},
+  });
 }
 
 export type RegisterResult =
@@ -137,7 +157,7 @@ export type RegisterResult =
  */
 export async function registerPhoto(
   actor: Actor,
-  input: { key: string; filename?: string },
+  input: { key: string; filename?: string; albumId?: string },
 ): Promise<RegisterResult> {
   assertCan(actor, "write");
   if (!isOriginalKey(input.key)) return { ok: false, message: "That upload could not be found." };
@@ -160,6 +180,7 @@ export async function registerPhoto(
   });
   if (existing) {
     await storage.delete([input.key]);
+    await addToAlbum(existing.id, input.albumId);
     return { ok: true, id: existing.id, duplicate: true };
   }
 
@@ -197,8 +218,10 @@ export async function registerPhoto(
     });
     if (!winner) throw error;
     await storage.delete([input.key]);
+    await addToAlbum(winner.id, input.albumId);
     return { ok: true, id: winner.id, duplicate: true };
   }
+  await addToAlbum(id, input.albumId);
   return { ok: true, id, duplicate: false };
 }
 
@@ -209,9 +232,11 @@ export interface PhotoFormInput {
   photographer: string;
   /** Slugs of the people in the photo. */
   people: string[];
+  /** Ids of the albums it belongs in. */
+  albums: string[];
 }
 
-export type PhotoErrors = Partial<Record<"caption" | "date" | "people", string>>;
+export type PhotoErrors = Partial<Record<"caption" | "date" | "people" | "albums", string>>;
 
 export async function updatePhoto(
   actor: Actor,
@@ -231,12 +256,21 @@ export async function updatePhoto(
   const slugs = [...new Set(input.people)];
   const people = await db.person.findMany({ where: { slug: { in: slugs } }, select: { id: true } });
   if (people.length !== slugs.length) errors.people = "Someone picked is no longer in the chest.";
+  const albumIds = [...new Set(input.albums)].filter((albumId) => UUID.test(albumId));
+  const albums = await db.album.findMany({ where: { id: { in: albumIds } }, select: { id: true } });
+  if (albums.length !== new Set(input.albums).size) {
+    errors.albums = "An album picked is no longer in the chest.";
+  }
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   await db.$transaction(async (tx) => {
     const photo = await tx.photo.findUnique({
       where: { id },
-      select: { dateDisplay: true, people: { select: { personId: true } } },
+      select: {
+        dateDisplay: true,
+        people: { select: { personId: true } },
+        albums: { select: { albumId: true } },
+      },
     });
     if (!photo) return;
     await tx.photo.update({
@@ -266,6 +300,19 @@ export async function updatePhoto(
           createdById: actor.kind === "user" ? actor.userId : null,
         })),
     });
+
+    // Albums work the same way: only the difference, so the order inside each is kept.
+    const wantedAlbums = new Set(albums.map((album) => album.id));
+    const hadAlbums = new Set(photo.albums.map((entry) => entry.albumId));
+    await tx.albumPhoto.deleteMany({
+      where: { photoId: id, albumId: { in: [...hadAlbums].filter((a) => !wantedAlbums.has(a)) } },
+    });
+    for (const albumId of [...wantedAlbums].filter((a) => !hadAlbums.has(a))) {
+      const last = await tx.albumPhoto.aggregate({ where: { albumId }, _max: { position: true } });
+      await tx.albumPhoto.create({
+        data: { albumId, photoId: id, position: (last._max.position ?? -1) + 1 },
+      });
+    }
   });
   return { ok: true };
 }

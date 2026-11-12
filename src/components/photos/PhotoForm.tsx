@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import { Button, Group, MultiSelect, Stack, Text, Textarea, TextInput } from "@mantine/core";
+import { useMounted } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import {
   deletePhotoAction,
@@ -15,19 +16,23 @@ export function PhotoForm({
   id,
   initial,
   people,
+  albums,
 }: {
   id: string;
   initial: PhotoFormInput;
   people: { value: string; label: string }[];
+  albums: { value: string; label: string }[];
 }) {
   const start: PhotoFormState = { input: initial, errors: {} };
   const [state, action, pending] = useActionState(savePhotoAction, start);
   const remove = useRef<HTMLFormElement>(null);
+  // Set once the page is interactive; the pickers ignore typing before that.
+  const ready = useMounted();
   const { input, errors } = state;
 
   return (
     <Stack gap="md">
-      <form action={action} key={JSON.stringify(input)} data-testid="photo-form">
+      <form action={action} key={JSON.stringify(input)} data-testid="photo-form" data-ready={ready}>
         <input type="hidden" name="id" value={id} />
         <Stack gap="sm">
           <Textarea
@@ -52,6 +57,20 @@ export function PhotoForm({
             error={errors.people}
             data-testid="photo-people-input"
           />
+          {albums.length > 0 && (
+            <MultiSelect
+              name="albums"
+              label="Albums"
+              placeholder="Put it in an album"
+              data={albums}
+              defaultValue={input.albums}
+              searchable
+              clearable
+              nothingFoundMessage="No album by that name"
+              error={errors.albums}
+              data-testid="photo-albums-input"
+            />
+          )}
           <Group grow align="flex-start">
             <TextInput
               name="date"

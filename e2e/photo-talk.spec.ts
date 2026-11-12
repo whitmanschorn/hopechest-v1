@@ -107,6 +107,9 @@ test("mark where someone is in a photo; their page and profile picture use it", 
   const photoPath = await addPhoto(page);
   // Nobody is tagged yet, so there is nobody to mark.
   await expect(shown(page, "face-tools")).toHaveCount(0);
+  await expect(
+    page.locator('[data-testid="photo-form"][data-ready="true"]').filter({ visible: true }),
+  ).toBeVisible();
   await shown(page, "photo-people-input").fill(name);
   await page.getByRole("option", { name }).click();
   await page.keyboard.press("Escape");

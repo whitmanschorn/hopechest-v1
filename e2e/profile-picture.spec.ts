@@ -79,6 +79,9 @@ test("choose a profile picture from the photos someone is tagged in", async ({ p
     .setInputFiles(await testJpeg());
   await shown(page, "upload-link").click();
   await page.waitForURL(/\/photos\/[0-9a-f-]{36}$/);
+  await expect(
+    page.locator('[data-testid="photo-form"][data-ready="true"]').filter({ visible: true }),
+  ).toBeVisible();
   await shown(page, "photo-people-input").fill(name);
   await page.getByRole("option", { name }).click();
   await page.keyboard.press("Escape");
