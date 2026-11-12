@@ -11,6 +11,7 @@ import {
   listAlbums,
   updateAlbum,
 } from "@/server/albums/service";
+import { getDocument } from "@/server/documents/service";
 import {
   createEvent,
   deleteEvent,
@@ -27,6 +28,7 @@ import {
   getPersonHistory,
   listPeople,
   removeRelationship,
+  resolveKin,
   updatePerson,
   type RelationInput,
 } from "@/server/people/service";
@@ -246,6 +248,18 @@ export const ROUTES: readonly ApiRoute[] = [
     },
   },
 
+  {
+    method: "GET",
+    path: "kin",
+    needs: "read",
+    summary:
+      "Who family words mean for one person. ?person=<slug>&words=grandma and grandpa answers with the people each word means for them.",
+    run: async ({ actor, query }) => {
+      const kin = await resolveKin(actor, query.get("person") ?? "", query.get("words") ?? "");
+      return kin ? ok({ kin }) : missing("person");
+    },
+  },
+
   // ── events ──
   {
     method: "GET",
@@ -364,6 +378,18 @@ export const ROUTES: readonly ApiRoute[] = [
     summary: "Delete a place. Events that happened there are kept and lose their place.",
     run: async ({ actor, params }) =>
       (await deletePlace(actor, params.slug)) ? ok({ ok: true }) : missing("place"),
+  },
+
+  // ── documents ──
+  {
+    method: "GET",
+    path: "documents/:id",
+    needs: "read",
+    summary: "One document: its title, kind, date, full text and how to cite it.",
+    run: async ({ actor, params }) => {
+      const document = await getDocument(actor, params.id);
+      return document ? ok({ document }) : missing("document");
+    },
   },
 
   // ── photos ──
