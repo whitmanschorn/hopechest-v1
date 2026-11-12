@@ -1,5 +1,13 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { IMAGE_TYPES, isOriginalKey, MAX_UPLOAD_BYTES, originalKey } from "@/lib/photos/keys";
+import {
+  DOCUMENT_TYPES,
+  documentFileKey,
+  IMAGE_TYPES,
+  isDocumentFileKey,
+  isOriginalKey,
+  MAX_UPLOAD_BYTES,
+  originalKey,
+} from "@/lib/photos/keys";
 import { can } from "@/server/actor";
 import { actorFromRequest } from "@/server/api/http";
 import { getStorage } from "@/server/storage";
@@ -24,9 +32,10 @@ export async function POST(request: Request) {
       body,
       onBeforeGenerateToken: async (pathname) => {
         if (!(await uploader(request))) throw new Error("Not allowed");
-        if (!isOriginalKey(pathname)) throw new Error("Unexpected file name");
+        const forDocument = isDocumentFileKey(pathname);
+        if (!forDocument && !isOriginalKey(pathname)) throw new Error("Unexpected file name");
         return {
-          allowedContentTypes: Object.keys(IMAGE_TYPES),
+          allowedContentTypes: Object.keys(forDocument ? DOCUMENT_TYPES : IMAGE_TYPES),
           maximumSizeInBytes: MAX_UPLOAD_BYTES,
           addRandomSuffix: false,
           allowOverwrite: false,
@@ -41,16 +50,21 @@ export async function POST(request: Request) {
 
 /**
  * Development and CI: the file comes through the app and is written to disk.
- * PUT /api/uploads?id=<uuid> with the file as the body.
+ * PUT /api/uploads?id=<uuid> with the file as the body; add &for=document for a
+ * document's file rather than a photo.
  */
 export async function PUT(request: Request) {
   const storage = getStorage();
   if (storage.kind !== "local") return new Response("Not available here", { status: 404 });
   if (!(await uploader(request))) return new Response("Not allowed", { status: 401 });
 
-  const id = new URL(request.url).searchParams.get("id") ?? "";
+  const query = new URL(request.url).searchParams;
+  const id = query.get("id") ?? "";
   const contentType = request.headers.get("content-type")?.split(";")[0] ?? "";
-  const key = originalKey(id, contentType);
+  const key =
+    query.get("for") === "document"
+      ? documentFileKey(id, contentType)
+      : originalKey(id, contentType);
   if (!key) return Response.json({ error: "That kind of file is not accepted." }, { status: 415 });
 
   const bytes = Buffer.from(await request.arrayBuffer());

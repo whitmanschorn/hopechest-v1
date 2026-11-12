@@ -117,6 +117,15 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Every source (scans, Facebook) is first turned into a folder of pictures with JSON sidecars
   (`src/lib/ingest/sidecar.ts`), so there is one way in.
 
+## Documents
+
+- Documents (`src/server/documents/`, `docs/documents.md`) hold text plus, optionally, the original
+  file. Search is Postgres full-text over `documents.search_vector`, which a database trigger keeps
+  in step with the title and text; never write that column.
+- Saving text re-cuts the document into `document_chunks` (`src/lib/documents/chunk.ts`), the
+  passages Ask will cite.
+- A document that recorded facts cite cannot be deleted.
+
 ## UI
 
 - Signed-in pages render inside `src/components/AppFrame.tsx`. Add a page's menu entry to

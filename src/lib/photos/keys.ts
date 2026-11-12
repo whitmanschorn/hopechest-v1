@@ -42,6 +42,44 @@ export function avatarKey(personId: string, pictureId: string): string {
   return `avatars/${personId}/${pictureId}.jpg`;
 }
 
+/** What a document can be uploaded as: papers, typed text, or a picture of a page. */
+export const DOCUMENT_TYPES: Record<string, string> = {
+  "application/pdf": "pdf",
+  "text/plain": "txt",
+  "text/markdown": "md",
+  ...IMAGE_TYPES,
+};
+
+/** A document file's type: what the browser says, else what its name says. */
+export function documentContentType(filename: string, type: string): string | null {
+  if (DOCUMENT_TYPES[type]) return type;
+  const extension = filename.slice(filename.lastIndexOf(".") + 1).toLowerCase();
+  const byName: Record<string, string> = {
+    pdf: "application/pdf",
+    txt: "text/plain",
+    md: "text/markdown",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    tif: "image/tiff",
+    tiff: "image/tiff",
+    gif: "image/gif",
+  };
+  return byName[extension] ?? null;
+}
+
+/** Where a new document's file is uploaded: documents/files/<uuid>.<ext>. */
+export function documentFileKey(uploadId: string, contentType: string): string | null {
+  const extension = DOCUMENT_TYPES[contentType];
+  if (!extension || !/^[0-9a-f-]{36}$/.test(uploadId)) return null;
+  return `documents/files/${uploadId}.${extension}`;
+}
+
+export function isDocumentFileKey(key: string): boolean {
+  return /^documents\/files\/[0-9a-f-]{36}\.(pdf|txt|md|jpg|png|webp|tif|gif)$/.test(key);
+}
+
 export function fileUrl(key: string): string {
   return `/api/files/${key}`;
 }
@@ -54,6 +92,6 @@ export function keyFromUrl(url: string): string | null {
 
 export function contentTypeForKey(key: string): string {
   const extension = key.slice(key.lastIndexOf(".") + 1).toLowerCase();
-  const found = Object.entries(IMAGE_TYPES).find(([, ext]) => ext === extension);
+  const found = Object.entries(DOCUMENT_TYPES).find(([, ext]) => ext === extension);
   return found?.[0] ?? "application/octet-stream";
 }

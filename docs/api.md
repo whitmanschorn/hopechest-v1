@@ -24,17 +24,19 @@ Revoking a key on the Settings page stops it at once.
 That listing is generated from the route table in `src/server/api/routes.ts`, so it is never out
 of date. In short:
 
-| Area   | Routes                                                                                 |
-| ------ | -------------------------------------------------------------------------------------- |
-| People | list and search, get, add, change, history, add a relationship, remove a relationship  |
-| Events | list (by kind, person or place), get with its sources, add, change, delete             |
-| Places | list, get, add, change, delete                                                         |
-| Photos | list (optionally one person's), get, change details, delete                            |
-| Albums | list, get, add, change, delete                                                         |
-| Ingest | start a batch, add a file to it, finish it; list, date, publish and discard for review |
+| Area      | Routes                                                                                    |
+| --------- | ----------------------------------------------------------------------------------------- |
+| People    | list and search, get, add, change, history, add a relationship, remove a relationship     |
+| Events    | list (by kind, person or place), get with its sources, add, change, delete                |
+| Places    | list, get, add, change, delete                                                            |
+| Photos    | list (optionally one person's), get, change details, delete                               |
+| Albums    | list, get, add, change, delete                                                            |
+| Documents | list and search by words, get, add from text, change (including setting the text), delete |
+| Ingest    | start a batch, add a file to it, finish it; list, date, publish and discard for review    |
 
 Photos are uploaded in bulk through the ingest routes, which the `hopechest ingest` command drives
-(`docs/ingest.md`). Documents come next.
+(`docs/ingest.md`). Documents are added through the API as text (`docs/documents.md`); files are
+added on the website.
 
 ## Conventions
 
@@ -55,9 +57,8 @@ answers with the wedding of George Sr. and Lucille, and `GET /api/v1/events/<id>
 marriage licence under `sources`.
 
 The same operations are available to assistants as MCP tools (`docs/mcp.md`) and from a terminal
-as the `hopechest` command (`docs/cli.md`). Two routes exist
-mainly for them: `GET /api/v1/kin` (who "grandma" is for a given person) and
-`GET /api/v1/documents/<id>` (a document's text).
+as the `hopechest` command (`docs/cli.md`). One route exists
+mainly for them: `GET /api/v1/kin` (who "grandma" is for a given person).
 
 ## Adding a route
 

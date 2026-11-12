@@ -1,0 +1,12 @@
+.row {
+  padding: var(--mantine-spacing-sm) 0;
+  border-bottom: 1px solid var(--hc-hairline);
+}
+
+.hit {
+  background: color-mix(in srgb, var(--mantine-color-yellow-4) 45%, transparent);
+  color: inherit;
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0 1px;
+}

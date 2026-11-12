@@ -52,6 +52,7 @@ const relationFields = {
     .describe("For a partnership that ended, how"),
 };
 
+const documentKind = z.enum(["letter", "record", "recipe", "story", "article", "other"]);
 const eventKind = z.enum([
   "birth",
   "death",
@@ -154,6 +155,20 @@ export const TOOLS: readonly McpTool[] = [
       "The full text of a document in the chest, such as a marriage licence or a letter, with how to cite it. Source ids from get_event lead here.",
     route: "GET documents/:id",
     input: { id: id("the document") },
+  },
+  {
+    name: "search_documents",
+    title: "Search documents",
+    description:
+      "Search the words of every letter, record, recipe and story in the chest. Answers with the best matches first, each with an excerpt; read one in full with get_document. Leave `q` out to list documents by title.",
+    route: "GET documents",
+    input: {
+      q: z
+        .string()
+        .optional()
+        .describe('Words to look for; "quoted phrases", OR and -word work as in a web search'),
+      kind: documentKind.optional(),
+    },
   },
   {
     name: "person_history",
@@ -342,6 +357,34 @@ export const TOOLS: readonly McpTool[] = [
     description: "Delete an album. Its photos stay in the chest.",
     route: "DELETE albums/:id",
     input: { id: id("the album") },
+  },
+
+  {
+    name: "add_document",
+    title: "Add a document",
+    description:
+      "Add a document from its text: a letter someone dictated, a transcription, a story. The same text added twice gives the document already there.",
+    route: "POST documents",
+    input: {
+      title: z.string(),
+      kind: documentKind.optional(),
+      date: date("When it was written"),
+      text: z.string().describe("What it says. Start a line with ## for a section heading"),
+    },
+  },
+  {
+    name: "update_document",
+    title: "Change a document",
+    description:
+      "Change a document's title, kind or date, or set its text. Use this to type out a scanned page whose text is empty: transcribe exactly what is written, without correcting or summarising.",
+    route: "PATCH documents/:id",
+    input: {
+      id: id("the document"),
+      title: z.string().optional(),
+      kind: documentKind.optional(),
+      date: date("When it was written"),
+      text: z.string().optional().describe("The full text; replaces what was there"),
+    },
   },
 
   // ── reviewing bulk arrivals ──
