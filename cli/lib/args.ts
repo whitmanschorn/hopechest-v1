@@ -20,9 +20,9 @@ export interface CommandLine {
   rest: string[];
 }
 
-/** Options of `hopechest ingest`: those that take a value, and those that do not. */
+/** Options of `hopechest ingest` and `facebook-export`: those that take a value, and those that do not. */
 export const COMMAND_OPTIONS = {
-  values: ["label", "source", "date", "album", "photographer", "people"],
+  values: ["label", "source", "date", "album", "photographer", "people", "out"],
   flags: ["dry-run"],
 } as const;
 

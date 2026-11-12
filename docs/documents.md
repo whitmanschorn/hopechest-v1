@@ -52,5 +52,6 @@ nothing to show where they came from.
   `documents/files/`, and served only to signed-in members through `/api/files`.
 - `e2e/documents.spec.ts` covers typing a letter in, a PDF, a scanned page, search, and the API.
 
-Not here yet: documents in `hopechest ingest` folders, reading Word files, and reading text off
-scanned pages.
+PDFs and text files in a folder come in through `hopechest ingest` (`docs/ingest.md`).
+
+Not here yet: reading Word files, and reading text off scanned pages.

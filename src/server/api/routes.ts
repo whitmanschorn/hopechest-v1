@@ -651,13 +651,15 @@ export const ROUTES: readonly ApiRoute[] = [
       "One file of a batch. Send its hash first: the answer is `duplicate` or `upload`. " +
       "After uploading the original, send again with `key` to make the photo.",
     fields:
-      "sha256, filename, key (of the uploaded original), " +
-      "sidecar ({ caption, date, photographer, people (names or slugs), album (title), sourceUrl })",
+      "sha256, filename, kind (photo|document; default photo), key (of the uploaded original), " +
+      "sidecar ({ caption, date, photographer, people (names or slugs), album (title), sourceUrl, note; " +
+      "for a document: title, kind (letter|record|recipe|story|article|other), date })",
     run: async ({ actor, params, body }) => {
       const result = await addItem(actor, params.id, {
         sha256: asText(body.sha256),
         filename: asText(body.filename) || undefined,
         key: asText(body.key) || undefined,
+        kind: asText(body.kind) || undefined,
         sidecar: body.sidecar,
       });
       if (!result.ok) {
@@ -665,8 +667,8 @@ export const ROUTES: readonly ApiRoute[] = [
           result.status === 404 ? "not_found" : result.status === 409 ? "finished" : "invalid";
         return { status: result.status, body: { error, message: result.message } };
       }
-      const { state, photoId, problems } = result;
-      return ok({ state, photoId, problems });
+      const { state, photoId, documentId, problems } = result;
+      return ok({ state, photoId, documentId, problems });
     },
   },
   {
@@ -683,8 +685,9 @@ export const ROUTES: readonly ApiRoute[] = [
     method: "POST",
     path: "ingest/batches/:id/publish",
     needs: "write",
-    summary: "Let the family see a batch's waiting photos: all of them, or only `photos`.",
-    fields: "photos (optional list of photo ids)",
+    summary:
+      "Let the family see what waits in a batch: all of it, or only the photos and documents in `photos`.",
+    fields: "photos (optional list of photo or document ids)",
     run: async ({ actor, params, body }) => {
       if (!(await getBatch(actor, params.id))) return missing("batch");
       const published = await publishPhotos(
@@ -699,8 +702,9 @@ export const ROUTES: readonly ApiRoute[] = [
     method: "POST",
     path: "ingest/batches/:id/discard",
     needs: "write",
-    summary: "Throw out waiting photos from a batch. Published photos are never touched.",
-    fields: "photos (list of photo ids)",
+    summary:
+      "Throw out waiting photos or documents from a batch. Published ones are never touched.",
+    fields: "photos (list of photo or document ids)",
     run: async ({ actor, params, body }) => {
       if (!(await getBatch(actor, params.id))) return missing("batch");
       const discarded = await discardPhotos(actor, params.id, asList(body.photos));

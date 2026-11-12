@@ -15,7 +15,7 @@ import {
   type FolderFile,
   type Sidecar,
 } from "../src/lib/ingest/sidecar.ts";
-import { MAX_UPLOAD_BYTES, originalKey } from "../src/lib/photos/keys.ts";
+import { documentFileKey, MAX_UPLOAD_BYTES, originalKey } from "../src/lib/photos/keys.ts";
 import { callApi, refusal, UnreachableError } from "./lib/api.ts";
 import { UsageError } from "./lib/args.ts";
 import type { Target } from "./lib/config.ts";
@@ -36,7 +36,7 @@ export interface IngestReport {
   failed: { file: string; reason: string }[];
   /** Details that came with a file but could not be applied. */
   problems: { file: string; problems: string[] }[];
-  /** Files in the folder that are not pictures the chest takes. */
+  /** Files in the folder that are not pictures or documents the chest takes. */
   skipped: string[];
   review: string | null;
 }
@@ -71,9 +71,10 @@ async function sendOriginal(
   mode: "blob" | "local",
   bytes: Buffer,
   contentType: string,
+  kind: "photo" | "document",
 ): Promise<string> {
   const id = randomUUID();
-  const key = originalKey(id, contentType);
+  const key = kind === "document" ? documentFileKey(id, contentType) : originalKey(id, contentType);
   if (!key) throw new Error("That kind of file is not accepted.");
   const headers = { Authorization: `Bearer ${target.key}` };
   if (mode === "blob") {
@@ -87,7 +88,8 @@ async function sendOriginal(
     });
     return key;
   }
-  const response = await fetch(`${target.url}/api/uploads?id=${id}`, {
+  const purpose = kind === "document" ? "&for=document" : "";
+  const response = await fetch(`${target.url}/api/uploads?id=${id}${purpose}`, {
     method: "PUT",
     headers: { ...headers, "Content-Type": contentType },
     body: new Uint8Array(bytes),
@@ -118,10 +120,10 @@ export async function runIngest(
     skipped,
     review: null,
   };
-  if (files.length === 0) throw new UsageError(`No pictures found in "${folder}".`);
+  if (files.length === 0) throw new UsageError(`No pictures or documents found in "${folder}".`);
   const label = options.label?.trim() || basename(folder);
   if (options.dryRun || !findTarget) {
-    log(`${files.length} pictures would be sent as "${label}". Nothing was sent.`);
+    log(`${files.length} files would be sent as "${label}". Nothing was sent.`);
     return report;
   }
   const target = findTarget();
@@ -149,15 +151,22 @@ export async function runIngest(
       const bytes = readFileSync(join(folder, file.path));
       if (bytes.byteLength > MAX_UPLOAD_BYTES) return fail("Larger than 50 MB.");
       const own = readSidecar(folder, file);
+      // A picture is a photo unless its sidecar says it is a page of a document.
+      const kind =
+        file.kind === "document" || own.sidecar.type === "document" ? "document" : "photo";
+      // The run's date, album and people describe its photos. A letter found in
+      // the same box was not written that year, so documents take only their own.
+      const sidecar = kind === "photo" ? withDefaults(own.sidecar, options.defaults) : own.sidecar;
       const body = {
         sha256: createHash("sha256").update(bytes).digest("hex"),
         filename: file.path,
-        sidecar: withDefaults(own.sidecar, options.defaults),
+        kind,
+        sidecar,
       };
       const path = `ingest/batches/${batchId}/items`;
       let answer = await callApi(target, { method: "POST", path, body });
       if (answer.ok && answer.json.state === "upload") {
-        const key = await sendOriginal(target, mode, bytes, file.contentType);
+        const key = await sendOriginal(target, mode, bytes, file.contentType, kind);
         answer = await callApi(target, { method: "POST", path, body: { ...body, key } });
       }
       if (!answer.ok) {

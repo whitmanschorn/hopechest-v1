@@ -5,6 +5,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { photoLabel } from "@/components/photos/PhotoGrid";
 import { ReviewBoard } from "@/components/review/ReviewBoard";
+import { KIND_LABELS } from "@/lib/documents/kinds";
 import { describe } from "@/lib/fuzzyDate";
 import { countLabels, sourceLabel } from "@/lib/ingest/labels";
 import { requireActor } from "@/server/auth/session";
@@ -58,6 +59,15 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
 
         <ReviewBoard
           batchId={batch.id}
+          documents={batch.waitingDocuments.map((doc) => ({
+            id: doc.id,
+            title: doc.title,
+            kind: KIND_LABELS[doc.kind] ?? "Document",
+            date: doc.date ? describe(doc.date) : null,
+            filename: doc.filename,
+            hasText: doc.hasText,
+            problems: doc.problems,
+          }))}
           photos={batch.waiting.map((photo) => ({
             id: photo.id,
             thumbUrl: photo.thumbUrl,

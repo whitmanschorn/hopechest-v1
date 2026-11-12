@@ -21,7 +21,8 @@ export default async function ReviewPage() {
             Review
           </Title>
           <Text c="dimmed">
-            Photos brought in by the boxful wait here. The family sees them once you publish them.
+            Photos and documents brought in by the boxful wait here. The family sees them once you
+            publish them.
           </Text>
         </div>
 

@@ -61,8 +61,11 @@ hopechest patch places/balboa-island notes="Home of the banana stand."
 
 ## Bringing in a folder
 
-`hopechest ingest <folder>` sends a folder of pictures as one batch for review. It has its own
-guide: `docs/ingest.md`.
+`hopechest ingest <folder>` sends a folder of pictures and documents as one batch for review. It
+has its own guide: `docs/ingest.md`.
+
+`hopechest facebook-export <folder> --out <folder>` turns an unzipped Facebook export into such a
+folder without sending anything: `docs/facebook.md`.
 
 ## Output
 

@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
-import { parseFuzzyDate, toColumns } from "@/lib/fuzzyDate";
+import { fromColumns, parseFuzzyDate, toColumns, type FuzzyDate } from "@/lib/fuzzyDate";
+import { isKind } from "@/lib/documents/kinds";
 import { matchPerson, parseSidecar, type Sidecar } from "@/lib/ingest/sidecar";
 import { assertCan, type Actor } from "@/server/actor";
 import {
@@ -9,6 +10,7 @@ import {
   toCard,
   type PhotoCard,
 } from "@/server/photos/service";
+import { createDocument, deleteDocument } from "@/server/documents/service";
 import { getStorage } from "@/server/storage";
 
 /**
@@ -24,7 +26,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 
 export interface BatchCounts {
-  /** Photos in the review queue. */
+  /** Photos and documents in the review queue. */
   waiting: number;
   published: number;
   /** Files that were already in the chest. */
@@ -52,15 +54,33 @@ export interface ReviewPhoto extends PhotoCard {
   problems: string[];
 }
 
+export interface ReviewDocument {
+  id: string;
+  title: string;
+  kind: string;
+  date: FuzzyDate | null;
+  /** False for a scan nobody has typed out yet. */
+  hasText: boolean;
+  filename: string | null;
+  problems: string[];
+}
+
 export interface BatchDetail extends BatchSummary {
   waiting: ReviewPhoto[];
+  waitingDocuments: ReviewDocument[];
   failed: { filename: string | null; error: string }[];
 }
 
 const summaryInclude = {
   createdByUser: { select: { person: { select: { displayName: true } } } },
   createdByApiKey: { select: { name: true } },
-  items: { select: { status: true, photo: { select: { status: true } } } },
+  items: {
+    select: {
+      status: true,
+      photo: { select: { status: true } },
+      document: { select: { status: true } },
+    },
+  },
 } as const;
 
 type SummaryRow = {
@@ -71,7 +91,11 @@ type SummaryRow = {
   createdAt: Date;
   createdByUser: { person: { displayName: string } | null } | null;
   createdByApiKey: { name: string } | null;
-  items: { status: string; photo: { status: string } | null }[];
+  items: {
+    status: string;
+    photo: { status: string } | null;
+    document: { status: string } | null;
+  }[];
 };
 
 function summarise(batch: SummaryRow): BatchSummary {
@@ -79,8 +103,8 @@ function summarise(batch: SummaryRow): BatchSummary {
   for (const item of batch.items) {
     if (item.status === "DUPLICATE") counts.duplicates++;
     else if (item.status === "FAILED") counts.failed++;
-    else if (!item.photo) counts.discarded++;
-    else if (item.photo.status === "PUBLISHED") counts.published++;
+    else if (!item.photo && !item.document) counts.discarded++;
+    else if ((item.photo ?? item.document)!.status === "PUBLISHED") counts.published++;
     else counts.waiting++;
   }
   return {
@@ -154,7 +178,12 @@ const nonDuplicates = (counts: BatchCounts) =>
 /** How many photos are waiting for review, across all batches. */
 export async function countWaiting(actor: Actor): Promise<number> {
   assertCan(actor, "write");
-  return getDb().photo.count({ where: { status: "NEEDS_REVIEW" } });
+  const db = getDb();
+  const [photos, documents] = await Promise.all([
+    db.photo.count({ where: { status: "NEEDS_REVIEW" } }),
+    db.document.count({ where: { status: "NEEDS_REVIEW" } }),
+  ]);
+  return photos + documents;
 }
 
 export async function getBatch(actor: Actor, id: string): Promise<BatchDetail | null> {
@@ -166,7 +195,11 @@ export async function getBatch(actor: Actor, id: string): Promise<BatchDetail | 
   const items = await db.ingestItem.findMany({
     where: {
       batchId: id,
-      OR: [{ status: "FAILED" }, { status: "PROCESSED", photo: { status: "NEEDS_REVIEW" } }],
+      OR: [
+        { status: "FAILED" },
+        { status: "PROCESSED", photo: { status: "NEEDS_REVIEW" } },
+        { status: "PROCESSED", document: { status: "NEEDS_REVIEW" } },
+      ],
     },
     orderBy: [{ originalFilename: "asc" }, { id: "asc" }],
     select: {
@@ -183,6 +216,21 @@ export async function getBatch(actor: Actor, id: string): Promise<BatchDetail | 
           },
         },
       },
+      document: {
+        select: {
+          id: true,
+          title: true,
+          kind: true,
+          text: true,
+          dateYear: true,
+          dateMonth: true,
+          dateDay: true,
+          datePrecision: true,
+          dateDisplay: true,
+          dateDeduced: true,
+          dateClue: true,
+        },
+      },
     },
   });
   return {
@@ -193,6 +241,17 @@ export async function getBatch(actor: Actor, id: string): Promise<BatchDetail | 
         ...toCard(item.photo!),
         filename: item.originalFilename,
         people: item.photo!.people.map((tag) => tag.person),
+        problems: problemsOf(item.sidecar),
+      })),
+    waitingDocuments: items
+      .filter((item) => item.document)
+      .map((item) => ({
+        id: item.document!.id,
+        title: item.document!.title,
+        kind: item.document!.kind.toLowerCase(),
+        date: fromColumns(item.document!),
+        hasText: Boolean(item.document!.text),
+        filename: item.originalFilename,
         problems: problemsOf(item.sidecar),
       })),
     failed: items
@@ -217,6 +276,7 @@ export type ItemResult =
        */
       state: "upload" | "added" | "duplicate" | "failed";
       photoId: string | null;
+      documentId: string | null;
       problems: string[];
     };
 
@@ -228,7 +288,14 @@ export type ItemResult =
 export async function addItem(
   actor: Actor,
   batchId: string,
-  input: { sha256: string; filename?: string; sidecar?: unknown; key?: string },
+  input: {
+    sha256: string;
+    filename?: string;
+    sidecar?: unknown;
+    key?: string;
+    /** "document" for a paper rather than a photo. Default "photo". */
+    kind?: string;
+  },
 ): Promise<ItemResult> {
   assertCan(actor, "ingest");
   const sha256 = input.sha256.trim().toLowerCase();
@@ -252,22 +319,26 @@ export async function addItem(
       ok: true,
       state: done.status === "DUPLICATE" ? "duplicate" : "added",
       photoId: done.photoId,
+      documentId: done.documentId,
       problems: problemsOf(done.sidecar),
     };
   }
 
   const sidecar = parseSidecar(input.sidecar);
+  const isDocument = input.kind === "document";
   const record = (data: {
     status: "PROCESSED" | "DUPLICATE" | "FAILED";
     photoId?: string | null;
+    documentId?: string | null;
     error?: string | null;
     problems?: string[];
   }) => {
     const fields = {
-      kind: "PHOTO" as const,
+      kind: isDocument ? ("DOCUMENT" as const) : ("PHOTO" as const),
       status: data.status,
       originalFilename: filename,
       photoId: data.photoId ?? null,
+      documentId: data.documentId ?? null,
       error: data.error ?? null,
       sidecar: { ...sidecar, ...(data.problems?.length ? { problems: data.problems } : {}) },
     };
@@ -278,11 +349,58 @@ export async function addItem(
     });
   };
 
+  const answer = (
+    state: "upload" | "added" | "duplicate" | "failed",
+    id: string | null,
+    problems: string[] = [],
+  ): ItemResult => ({
+    ok: true,
+    state,
+    photoId: isDocument ? null : id,
+    documentId: isDocument ? id : null,
+    problems,
+  });
+  const link = (id: string) => (isDocument ? { documentId: id } : { photoId: id });
+  const notes = sidecar.note ? [`Note: ${sidecar.note}`] : [];
+
   if (!input.key) {
-    const known = await db.photo.findUnique({ where: { sha256 }, select: { id: true } });
-    if (!known) return { ok: true, state: "upload", photoId: null, problems: [] };
-    await record({ status: "DUPLICATE", photoId: known.id });
-    return { ok: true, state: "duplicate", photoId: known.id, problems: [] };
+    const known = isDocument
+      ? await db.document.findUnique({ where: { sha256 }, select: { id: true } })
+      : await db.photo.findUnique({ where: { sha256 }, select: { id: true } });
+    if (!known) return answer("upload", null);
+    await record({ status: "DUPLICATE", ...link(known.id) });
+    return answer("duplicate", known.id);
+  }
+
+  if (isDocument) {
+    // A date or kind that cannot be used should not cost the document: it is
+    // added without, and the reviewer is told.
+    const problems = [...notes];
+    const kind = (sidecar.kind ?? "").toLowerCase();
+    if (kind && !isKind(kind)) problems.push(`"${sidecar.kind}" is not a kind of document.`);
+    const dated = sidecar.date ? parseFuzzyDate(sidecar.date)?.year !== undefined : false;
+    if (sidecar.date && !dated) problems.push(`Could not read the date "${sidecar.date}".`);
+    const made = await createDocument(actor, {
+      title: (sidecar.title ?? "").slice(0, 200),
+      kind: isKind(kind) ? kind : "",
+      date: dated ? sidecar.date! : "",
+      text: "",
+      fileKey: input.key,
+      // The title falls back to the file's own name, not the folders above it.
+      filename: filename?.split("/").pop(),
+      review: true,
+    });
+    if (!made.ok) {
+      const message = Object.values(made.errors)[0] ?? "It could not be added.";
+      await record({ status: "FAILED", error: message });
+      return answer("failed", null, [message]);
+    }
+    await record({
+      status: made.duplicate ? "DUPLICATE" : "PROCESSED",
+      documentId: made.id,
+      problems,
+    });
+    return answer(made.duplicate ? "duplicate" : "added", made.id, problems);
   }
 
   const result = await registerPhoto(actor, {
@@ -292,15 +410,15 @@ export async function addItem(
   });
   if (!result.ok) {
     await record({ status: "FAILED", error: result.message });
-    return { ok: true, state: "failed", photoId: null, problems: [result.message] };
+    return answer("failed", null, [result.message]);
   }
   if (result.duplicate) {
     await record({ status: "DUPLICATE", photoId: result.id });
-    return { ok: true, state: "duplicate", photoId: result.id, problems: [] };
+    return answer("duplicate", result.id);
   }
-  const problems = await applySidecar(actor, result.id, sidecar);
+  const problems = [...notes, ...(await applySidecar(actor, result.id, sidecar))];
   await record({ status: "PROCESSED", photoId: result.id, problems });
-  return { ok: true, state: "added", photoId: result.id, problems };
+  return answer("added", result.id, problems);
 }
 
 /**
@@ -391,46 +509,71 @@ export async function completeBatch(actor: Actor, id: string): Promise<BatchSumm
   return summarise(batch);
 }
 
-/** The batch's photos still waiting, narrowed to `photoIds` when given. */
-async function waitingIn(batchId: string, photoIds?: readonly string[]): Promise<string[]> {
-  if (!UUID.test(batchId)) return [];
-  const wanted = photoIds?.filter((id) => UUID.test(id));
+/** What in the batch is still waiting, narrowed to `ids` (of photos or documents) when given. */
+async function waitingIn(
+  batchId: string,
+  ids?: readonly string[],
+): Promise<{ photos: string[]; documents: string[] }> {
+  if (!UUID.test(batchId)) return { photos: [], documents: [] };
+  const wanted = ids?.filter((id) => UUID.test(id));
   const items = await getDb().ingestItem.findMany({
     where: {
       batchId,
-      photo: { status: "NEEDS_REVIEW" },
-      ...(wanted ? { photoId: { in: wanted } } : {}),
+      OR: [
+        {
+          photo: { status: "NEEDS_REVIEW" },
+          ...(wanted ? { photoId: { in: wanted } } : {}),
+        },
+        {
+          document: { status: "NEEDS_REVIEW" },
+          ...(wanted ? { documentId: { in: wanted } } : {}),
+        },
+      ],
     },
-    select: { photoId: true },
+    select: { photoId: true, documentId: true },
   });
-  return items.map((item) => item.photoId!);
+  return {
+    photos: items.flatMap((item) => (item.photoId ? [item.photoId] : [])),
+    documents: items.flatMap((item) => (item.documentId ? [item.documentId] : [])),
+  };
 }
 
-/** Lets the family see photos from a batch: all that are waiting, or the ones named. */
+/**
+ * Lets the family see what a batch brought: everything that is waiting, or
+ * the photos and documents named.
+ */
 export async function publishPhotos(
   actor: Actor,
   batchId: string,
-  photoIds?: readonly string[],
+  ids?: readonly string[],
 ): Promise<number> {
   assertCan(actor, "write");
-  const ids = await waitingIn(batchId, photoIds);
-  const { count } = await getDb().photo.updateMany({
-    where: { id: { in: ids }, status: "NEEDS_REVIEW" },
-    data: { status: "PUBLISHED" },
-  });
-  return count;
+  const { photos, documents } = await waitingIn(batchId, ids);
+  const db = getDb();
+  const [photoResult, documentResult] = await Promise.all([
+    db.photo.updateMany({
+      where: { id: { in: photos }, status: "NEEDS_REVIEW" },
+      data: { status: "PUBLISHED" },
+    }),
+    db.document.updateMany({
+      where: { id: { in: documents }, status: "NEEDS_REVIEW" },
+      data: { status: "PUBLISHED" },
+    }),
+  ]);
+  return photoResult.count + documentResult.count;
 }
 
-/** Throws out photos that are still waiting. Published ones are never touched. */
+/** Throws out photos and documents that are still waiting. Published ones are never touched. */
 export async function discardPhotos(
   actor: Actor,
   batchId: string,
-  photoIds: readonly string[],
+  ids: readonly string[],
 ): Promise<number> {
   assertCan(actor, "write");
-  const ids = await waitingIn(batchId, photoIds);
-  for (const id of ids) await deletePhoto(actor, id);
-  return ids.length;
+  const { photos, documents } = await waitingIn(batchId, ids);
+  for (const id of photos) await deletePhoto(actor, id);
+  for (const id of documents) await deleteDocument(actor, id);
+  return photos.length + documents.length;
 }
 
 /** Gives the same date to several waiting photos: "everything in this box is from 1974". */
@@ -445,9 +588,9 @@ export async function datePhotos(
   if (date?.year === undefined) {
     return { ok: false, message: 'Include a year, such as "1974", "July 1974" or "around 1974".' };
   }
-  const ids = await waitingIn(batchId, photoIds);
+  const { photos } = await waitingIn(batchId, photoIds);
   const { count } = await getDb().photo.updateMany({
-    where: { id: { in: ids } },
+    where: { id: { in: photos } },
     data: toColumns(date),
   });
   return { ok: true, count };
