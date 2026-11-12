@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { findKin } from "@/lib/ask/kinTerms";
 import { getDb } from "@/lib/db";
 import { fromColumns, toColumns, type FuzzyDate } from "@/lib/fuzzyDate";
 import { buildGraph, describeKin, siblingsOf, type KinGraph, type KinLink } from "@/lib/kinship";
@@ -287,6 +288,40 @@ export async function listPersonOptions(actor: Actor): Promise<{ value: string; 
     orderBy: { displayName: "asc" },
   });
   return people.map((person) => ({ value: person.slug, label: person.displayName }));
+}
+
+export interface KinAnswer {
+  /** The family word as it appeared: "grandma". */
+  word: string;
+  /** Who that is for the person asked about. Empty when the record has no one. */
+  people: { slug: string; displayName: string; kin: string | null }[];
+}
+
+/**
+ * Who the family words in `text` mean for one person: for George Michael,
+ * "grandma and grandpa" are Lucille and George Sr. Null if the person is not
+ * in the chest.
+ */
+export async function resolveKin(
+  actor: Actor,
+  personSlug: string,
+  text: string,
+): Promise<KinAnswer[] | null> {
+  assertCan(actor, "read");
+  const { refs, graph } = await loadFamily(getDb(), actor);
+  const asker = [...refs.values()].find((person) => person.slug === personSlug);
+  if (!asker) return null;
+  return findKin(graph, asker.id, text).map((mention) => ({
+    word: mention.word,
+    people: mention.people
+      .map((id) => refs.get(id)!)
+      .sort(byName)
+      .map((person) => ({
+        slug: person.slug,
+        displayName: person.displayName,
+        kin: describeKin(graph, asker.id, person.id),
+      })),
+  }));
 }
 
 // ───────────────────────────── writing ─────────────────────────────

@@ -1,4 +1,4 @@
-import { asList, asText, matchPath, mergeText } from "@/lib/api/match";
+import { asList, asText, matchPath, mergeText, splitArguments } from "@/lib/api/match";
 
 describe("REST helpers", () => {
   it("matches a path against a pattern and captures the named parts", () => {
@@ -35,5 +35,20 @@ describe("REST helpers", () => {
       city: "Balboa",
       notes: "",
     });
+  });
+
+  it("splits a tool call into the path, the query and the body", () => {
+    const read = splitArguments("GET", "events", { kind: "marriage", person: undefined });
+    expect(read.query.toString()).toBe("kind=marriage");
+    expect(read.body).toEqual({});
+
+    const write = splitArguments("PATCH", "people/:slug", {
+      slug: "lucille",
+      nicknames: ["Gangy"],
+      living: false,
+    });
+    expect(write.params).toEqual({ slug: "lucille" });
+    expect(write.body).toEqual({ nicknames: ["Gangy"], living: false });
+    expect(write.query.toString()).toBe("");
   });
 });

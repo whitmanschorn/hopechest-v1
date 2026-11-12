@@ -52,3 +52,31 @@ export function mergeText<T extends { [K in keyof T]: string }>(
   }
   return merged as T;
 }
+
+/**
+ * Splits a tool call's arguments for a route: the parts named in the path
+ * ("people/:slug"), then the rest as a query string for a GET or as the body
+ * for anything else. Arguments left out are not sent at all.
+ */
+export function splitArguments(
+  method: string,
+  path: string,
+  args: Record<string, unknown>,
+): { params: Record<string, string>; query: URLSearchParams; body: Record<string, unknown> } {
+  const params: Record<string, string> = {};
+  const query = new URLSearchParams();
+  const body: Record<string, unknown> = {};
+  const inPath = new Set(
+    path
+      .split("/")
+      .filter((part) => part.startsWith(":"))
+      .map((part) => part.slice(1)),
+  );
+  for (const [name, value] of Object.entries(args)) {
+    if (value === undefined) continue;
+    if (inPath.has(name)) params[name] = asText(value);
+    else if (method === "GET") query.set(name, asText(value));
+    else body[name] = value;
+  }
+  return { params, query, body };
+}

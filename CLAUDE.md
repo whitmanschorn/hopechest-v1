@@ -101,6 +101,10 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Callers send an API key (`Authorization: Bearer hc_...`) made by an admin under Settings
   (`src/server/apiKeys/`). A key is an `Actor` of kind `apiKey`, so services treat it like anyone
   else. Never check a key's scopes in a route.
+- `/api/mcp` offers the same routes to assistants as MCP tools (`docs/mcp.md`). A tool is an entry
+  in `src/server/mcp/tools.ts` naming a route and describing its input; it has no logic of its
+  own. `.mcp.json` points Claude Code at staging and at a local server, with keys read from the
+  environment.
 
 ## UI
 
