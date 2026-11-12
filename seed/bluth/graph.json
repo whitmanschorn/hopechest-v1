@@ -1,0 +1,28 @@
+{
+  "kinds": {
+    "bluth-company": "organization",
+    "frozen-banana-stand": "organization",
+    "the-alliance-of-magicians": "organization",
+    "bluth-family": "group",
+    "cornballer": "thing",
+    "stair-car": "thing",
+    "fakeblock": "thing"
+  },
+  "facts": [
+    { "subject": "person:george-sr", "predicate": "founded", "object": "page:bluth-company", "source": "bluth-company" },
+    { "subject": "person:george-sr", "predicate": "founded", "object": "page:frozen-banana-stand", "from": "1953", "source": "frozen-banana-stand" },
+    { "subject": "person:george-sr", "predicate": "made", "object": "page:cornballer", "source": "cornballer" },
+    { "subject": "page:cornballer", "predicate": "began", "value": "around 1975", "note": "the mid-1970s", "source": "cornballer" },
+    { "subject": "person:michael", "predicate": "worked_at", "object": "page:bluth-company", "note": "as president", "source": "michael-bluth" },
+    { "subject": "person:gob", "predicate": "occupation", "value": "Magician", "source": "gob" },
+    { "subject": "person:gob", "predicate": "member_of", "object": "page:the-alliance-of-magicians", "note": "a founder, later thrown out", "source": "the-alliance-of-magicians" },
+    { "subject": "person:tobias", "predicate": "occupation", "value": "Psychiatrist, then actor", "source": "tobias-funke" },
+    { "subject": "person:george-michael", "predicate": "made", "object": "page:fakeblock", "source": "fakeblock" },
+    { "subject": "page:bluth-company", "predicate": "owned", "object": "page:stair-car", "source": "stair-car" },
+    { "subject": "page:frozen-banana-stand", "predicate": "located_in", "object": "place:banana-stand", "source": "frozen-banana-stand" },
+    { "subject": "page:frozen-banana-stand", "predicate": "part_of", "object": "page:bluth-company", "source": "bluth-company" },
+    { "subject": "person:michael", "predicate": "lived_at", "object": "place:model-home", "source": "model-home" },
+    { "subject": "person:lucille", "predicate": "lived_at", "object": "place:balboa-towers", "source": "balboa-towers" },
+    { "subject": "person:lucille", "predicate": "friend_of", "object": "person:lucille-austero", "note": "best friend and rival", "source": "lucille-austero" }
+  ]
+}

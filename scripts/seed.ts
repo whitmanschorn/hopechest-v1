@@ -11,6 +11,7 @@ import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import { getChestConfig } from "../src/lib/chest.ts";
 import { toColumns } from "../src/lib/fuzzyDate.ts";
+import { BUILTIN_PREDICATES, checkFact, type NodeKind } from "../src/lib/graph/vocabulary.ts";
 import {
   chunkMarkdown,
   parseSeedDocument,
@@ -311,6 +312,79 @@ try {
     }
   }
 
+  // The looser facts of the graph: what kind of thing each topic page is, and
+  // who worked where, owned what, lived where. Each names the document it
+  // rests on. A fact already there (same subject, predicate and object or
+  // value) is left as it is.
+  const graphFile = join(dir, "graph.json");
+  let factsAdded = 0;
+  if (existsSync(graphFile)) {
+    const graph = JSON.parse(readFileSync(graphFile, "utf8")) as {
+      kinds?: Record<string, string>;
+      facts?: {
+        subject: string;
+        predicate: string;
+        object?: string;
+        value?: string;
+        from?: string;
+        until?: string;
+        note?: string;
+        source?: string;
+      }[];
+    };
+    for (const [slug, kind] of Object.entries(graph.kinds ?? {})) {
+      const updated = await db.entity.updateMany({
+        where: { key: `page:${slug}` },
+        data: { kind: upper(kind) as never },
+      });
+      if (updated.count === 0) fail(`graph.json: no wiki page "${slug}" to call a ${kind}`);
+    }
+    for (const fact of graph.facts ?? []) {
+      const name = `${fact.subject} ${fact.predicate} ${fact.object ?? fact.value}`;
+      const def = BUILTIN_PREDICATES.find((entry) => entry.key === fact.predicate);
+      const subject = await db.entity.findUnique({ where: { key: fact.subject } });
+      const object = fact.object
+        ? await db.entity.findUnique({ where: { key: fact.object } })
+        : null;
+      if (!subject) fail(`graph.json: ${name}: nothing called ${fact.subject}`);
+      if (fact.object && !object) fail(`graph.json: ${name}: nothing called ${fact.object}`);
+      const problem = checkFact(
+        def,
+        subject.kind.toLowerCase() as NodeKind,
+        object ? (object.kind.toLowerCase() as NodeKind) : null,
+      );
+      if (problem) fail(`graph.json: ${name}: ${problem}`);
+      if (fact.source && !sourceIds.has(fact.source)) {
+        fail(`graph.json: ${name}: no document "${fact.source}"`);
+      }
+      const isDate = def!.value === "date";
+      const value = {
+        objectId: object?.id ?? null,
+        valueText: !object && !isDate ? (fact.value ?? null) : null,
+        valueDate: !object && isDate ? (fact.value ?? null) : null,
+      };
+      const existing = await db.statement.findFirst({
+        where: { subjectId: subject.id, predicate: fact.predicate, ...value },
+        select: { id: true },
+      });
+      if (existing) continue;
+      const when = fact.from ?? (isDate ? fact.value : undefined);
+      await db.statement.create({
+        data: {
+          subjectId: subject.id,
+          predicate: fact.predicate,
+          ...value,
+          fromDate: fact.from ?? null,
+          untilDate: fact.until ?? null,
+          sortKey: when ? toColumns(resolveDate(when)).dateSortKey : null,
+          note: fact.note ?? null,
+          sourceId: fact.source ? sourceIds.get(fact.source)! : null,
+        },
+      });
+      factsAdded++;
+    }
+  }
+
   // An event recorded in a document is tied to it by an accepted claim, the
   // same trail a reviewer leaves when accepting something an agent proposed.
   for (const event of data.events) {
@@ -349,7 +423,7 @@ try {
   console.log(
     `Seeded ${family}: ${data.people.length} people, ${data.relationships.length} relationships, ` +
       `${data.places.length} places, ${data.events.length} events, ${data.documents.length} documents, ` +
-      `${pages} wiki pages written.`,
+      `${pages} wiki pages written, ${factsAdded} facts added.`,
   );
 } finally {
   await db.$disconnect();

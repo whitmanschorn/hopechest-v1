@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { IconPencil } from "@tabler/icons-react";
+import { IconPencil, IconTopologyStar3 } from "@tabler/icons-react";
 import { deleteEventAction } from "@/app/(app)/events/actions";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { LinkButton } from "@/components/LinkButton";
@@ -9,7 +9,9 @@ import { TextLink } from "@/components/TextLink";
 import { KIND_LABELS, ROLE_LABELS } from "@/lib/events/eventEdit";
 import { describe } from "@/lib/fuzzyDate";
 import { can } from "@/server/actor";
+import { FactsPanel } from "@/components/graph/FactsPanel";
 import { requireActor } from "@/server/auth/session";
+import { eventNodeKey } from "@/server/graph/service";
 import { getEvent, getEventSources } from "@/server/events/service";
 
 export const metadata: Metadata = { title: "Event · Hopechest" };
@@ -20,6 +22,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const event = await getEvent(actor, id);
   if (!event) notFound();
   const sources = await getEventSources(actor, event.id);
+  const nodeKey = await eventNodeKey(actor, event.id);
   const canWrite = can(actor, "write");
 
   return (
@@ -113,6 +116,25 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           ))}
         </Stack>
 
+        {nodeKey && (
+          <Stack gap="sm" component="section" data-testid="node-facts">
+            <Title order={2} fz="h3">
+              More about this event
+            </Title>
+            <FactsPanel actor={actor} nodeKey={nodeKey} core={false} />
+            <Group>
+              <LinkButton
+                href={`/graph?center=${encodeURIComponent(nodeKey)}`}
+                variant="subtle"
+                size="compact-sm"
+                leftSection={<IconTopologyStar3 size={14} />}
+                data-testid="see-in-graph"
+              >
+                See in the graph
+              </LinkButton>
+            </Group>
+          </Stack>
+        )}
         <Stack gap="sm" component="section" data-testid="event-sources">
           <Title order={2} fz="h3">
             Sources

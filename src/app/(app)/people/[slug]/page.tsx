@@ -2,12 +2,19 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { IconCalendarPlus, IconCamera, IconHistory, IconPencil } from "@tabler/icons-react";
+import {
+  IconCalendarPlus,
+  IconCamera,
+  IconHistory,
+  IconPencil,
+  IconTopologyStar3,
+} from "@tabler/icons-react";
 import { LinkButton } from "@/components/LinkButton";
 import { TextLink } from "@/components/TextLink";
 import { AddRelative } from "@/components/people/AddRelative";
 import { PhotoGrid } from "@/components/photos/PhotoGrid";
 import { ArticleBody } from "@/components/wiki/ArticleBody";
+import { FactsPanel } from "@/components/graph/FactsPanel";
 import { PageFacts } from "@/components/wiki/PageFacts";
 import { ACTION_LABELS, describeArgs } from "@/lib/claims/actions";
 import { PersonAvatar, PersonCard } from "@/components/people/PersonCard";
@@ -277,6 +284,21 @@ export default async function PersonPage({
               }))}
             />
           )}
+        </Section>
+
+        <Section title="More about them" testId="person-facts">
+          <FactsPanel actor={actor} nodeKey={`person:${person.slug}`} core={false} />
+          <Group mt="sm">
+            <LinkButton
+              href={`/graph?center=${encodeURIComponent(`person:${person.slug}`)}`}
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<IconTopologyStar3 size={14} />}
+              data-testid="see-in-graph"
+            >
+              See in the graph
+            </LinkButton>
+          </Group>
         </Section>
 
         <Section title="Family" testId="person-family">

@@ -71,6 +71,7 @@ model Person {
   invites           Invite[]
   actingSessions    Session[]          @relation("SessionActingPerson")
   article           Article?
+  entity            Entity?
 
   @@map("people")
 }
@@ -141,6 +142,7 @@ model Place {
   events    Event[]
   photos    Photo[]
   documents Document[]
+  entity    Entity?
 
   @@map("places")
 }
@@ -181,6 +183,7 @@ model Event {
 
   place        Place?             @relation(fields: [placeId], references: [id], onDelete: SetNull)
   participants EventParticipant[]
+  entity       Entity?
 
   @@index([kind])
   @@index([dateMonth, dateDay])
@@ -243,6 +246,7 @@ model Source {
   message     Message?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
   ingestBatch IngestBatch? @relation(fields: [ingestBatchId], references: [id], onDelete: SetNull)
   claims      Claim[]
+  statements  Statement[]
 
   @@index([documentId])
   @@index([photoId])
@@ -339,6 +343,7 @@ model User {
   claimsCreated  Claim[]           @relation("ClaimCreatedBy")
   claimsReviewed Claim[]           @relation("ClaimReviewedBy")
   articleEdits   ArticleRevision[]
+  statements     Statement[]
 
   @@map("users")
 }
@@ -443,6 +448,7 @@ model ApiKey {
   ingestBatches IngestBatch[]
   changelog     Changelog[]
   articleEdits  ArticleRevision[]
+  statements    Statement[]
 
   @@map("api_keys")
 }
@@ -687,6 +693,132 @@ model DocumentChunk {
   @@map("document_chunks")
 }
 
+// ───────────────────────────── the graph ────────────────────────────────
+
+/// What kind of thing a node of the family graph is. People, places and
+/// events have tables of their own; the rest exist as wiki topic pages.
+enum EntityKind {
+  PERSON
+  PLACE
+  EVENT
+  /// A wiki page about nothing more specific.
+  TOPIC
+  /// A company, school, church, regiment, club.
+  ORGANIZATION
+  /// A household or branch of the family, a band, a team.
+  GROUP
+  /// An object: an heirloom, a car, a boat, a recipe book.
+  THING
+  /// A pet or working animal.
+  ANIMAL
+}
+
+/// One node of the family graph. Every person, place, event and wiki topic
+/// page has exactly one, kept in step by database triggers (see the migration
+/// SQL), so anything can be the subject or object of a fact.
+model Entity {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind      EntityKind
+  /// How programs address it: "person:lucille", "place:model-home",
+  /// "event:<slug>", "page:<slug>".
+  key       String     @unique
+  name      String
+  personId  String?    @unique @map("person_id") @db.Uuid
+  placeId   String?    @unique @map("place_id") @db.Uuid
+  eventId   String?    @unique @map("event_id") @db.Uuid
+  articleId String?    @unique @map("article_id") @db.Uuid
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  person      Person?     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  place       Place?      @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  event       Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  article     Article?    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  factsAbout  Statement[] @relation("StatementSubject")
+  factsNaming Statement[] @relation("StatementObject")
+
+  @@index([kind, name])
+  @@map("entities")
+}
+
+enum PredicateValueType {
+  /// Points at another node.
+  ENTITY
+  TEXT
+  DATE
+  NUMBER
+}
+
+/// A kind of fact a family has added to the built-in vocabulary
+/// (src/lib/graph/vocabulary.ts), e.g. "taught piano to".
+model Predicate {
+  key          String             @id
+  /// Read from subject to object: "taught piano to".
+  label        String
+  /// Read from object to subject: "learned piano from". Empty for values.
+  inverseLabel String?            @map("inverse_label")
+  description  String?
+  valueType    PredicateValueType @map("value_type")
+  /// Kinds of node it can be said about; empty for any.
+  subjectKinds EntityKind[]       @map("subject_kinds")
+  /// Kinds of node it can point at; empty for any. Only for ENTITY values.
+  objectKinds  EntityKind[]       @map("object_kinds")
+  /// True when it reads the same both ways ("friend of").
+  symmetric    Boolean            @default(false)
+  createdById  String?            @map("created_by_id") @db.Uuid
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("predicates")
+}
+
+enum StatementRank {
+  /// The account the family goes by, when there is more than one.
+  PREFERRED
+  NORMAL
+  /// Kept for the record, known to be wrong.
+  DEPRECATED
+}
+
+/// One fact: subject, predicate, and either another node or a value. Several
+/// statements may give different accounts of the same thing, each with its
+/// own source; rank says which the family goes by.
+model Statement {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  subjectId         String        @map("subject_id") @db.Uuid
+  /// A key of the built-in vocabulary or of `predicates`.
+  predicate         String
+  objectId          String?       @map("object_id") @db.Uuid
+  valueText         String?       @map("value_text")
+  valueNumber       Float?        @map("value_number")
+  /// A DATE value, as text a person would write; parsed for display and order.
+  valueDate         String?       @map("value_date")
+  /// When it began and ended being true, as text ("1974", "around 1980").
+  fromDate          String?       @map("from_date")
+  untilDate         String?       @map("until_date")
+  /// Sort key of fromDate (or valueDate), so facts read in order.
+  sortKey           Int?          @map("sort_key")
+  /// A few words more: "as bookkeeper", "the blue one".
+  note              String?
+  rank              StatementRank @default(NORMAL)
+  sourceId          String?       @map("source_id") @db.Uuid
+  /// The words in the source that say so.
+  quote             String?
+  createdByUserId   String?       @map("created_by_user_id") @db.Uuid
+  createdByApiKeyId String?       @map("created_by_api_key_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  subject         Entity  @relation("StatementSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  object          Entity? @relation("StatementObject", fields: [objectId], references: [id], onDelete: Cascade)
+  source          Source? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdByApiKey ApiKey? @relation(fields: [createdByApiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([subjectId, predicate])
+  @@index([objectId, predicate])
+  @@index([predicate])
+  @@map("statements")
+}
+
 // ───────────────────────────── wiki ─────────────────────────────────────
 
 /// A page of prose anyone in the family can edit: a person's story, or a topic
@@ -706,6 +838,7 @@ model Article {
 
   person    Person?           @relation(fields: [personId], references: [id], onDelete: Cascade)
   revisions ArticleRevision[]
+  entity    Entity?
 
   @@index([searchVector], type: Gin)
   @@map("articles")

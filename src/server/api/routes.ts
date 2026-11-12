@@ -5,6 +5,18 @@ import { toFormInput, type PersonFormInput } from "@/lib/people/personEdit";
 import { toPlaceFormInput, type PlaceFormInput } from "@/lib/places/placeEdit";
 import type { Actor, Permission } from "@/server/actor";
 import {
+  addFact,
+  createPredicate,
+  deleteFact,
+  findPath,
+  getFacts,
+  getNeighbourhood,
+  listPredicates,
+  searchNodes,
+  setNodeKind,
+  updateFact,
+} from "@/server/graph/service";
+import {
   getArticle,
   getHistory,
   listArticles,
@@ -162,6 +174,11 @@ const EVENT_FIELDS =
 const PLACE_FIELDS = "label, street, city, region, country, lat, lng, notes";
 const PHOTO_FIELDS =
   "caption, date (text), photographer, people (list of slugs), albums (list of album ids)";
+const FACT_FIELDS =
+  "subject (node key, e.g. person:lucille), predicate (key from GET predicates), " +
+  "object (node key) or value (words, a date or a number), from, until (dates as text), note, " +
+  "rank (preferred|normal|deprecated), document (id of the source), quote (its words)";
+
 const ARTICLE_FIELDS =
   "title, body (text with ## headings, - lists, **bold**, [[links to people or pages]]), " +
   "append (text to add to the end, instead of body), summary (what changed, for the history)";
@@ -652,6 +669,155 @@ export const ROUTES: readonly ApiRoute[] = [
       if (!(await getAlbum(actor, params.id))) return missing("album");
       await deleteAlbum(actor, params.id);
       return ok({ ok: true });
+    },
+  },
+
+  // ── the graph ──
+  {
+    method: "GET",
+    path: "nodes",
+    needs: "read",
+    summary:
+      "Find nodes of the family graph by name: people, places, events and wiki topics. ?q= words, ?kind= narrows (repeatable, comma-separated).",
+    run: async ({ actor, query }) =>
+      ok({
+        nodes: await searchNodes(actor, {
+          q: query.get("q") ?? undefined,
+          kinds: asList(query.get("kind") ?? ""),
+        }),
+      }),
+  },
+  {
+    method: "GET",
+    path: "nodes/:key",
+    needs: "read",
+    summary:
+      "One node (e.g. person:lucille, page:bluth-company) with every fact about it, from both directions.",
+    run: async ({ actor, params }) => {
+      const found = await getFacts(actor, params.key);
+      return found ? ok(found) : missing("node");
+    },
+  },
+  {
+    method: "PATCH",
+    path: "nodes/:key",
+    needs: "write",
+    summary: "Say what kind of thing a wiki topic page is.",
+    fields: "kind (topic|organization|group|thing|animal)",
+    run: async ({ actor, params, body }) => {
+      if (!(await setNodeKind(actor, params.key, asText(body.kind)))) {
+        return invalid({
+          errors: {
+            kind: "Only a wiki topic page has a kind to set: topic, organization, group, thing or animal.",
+          },
+        });
+      }
+      return ok(await getFacts(actor, params.key));
+    },
+  },
+  {
+    method: "POST",
+    path: "facts",
+    needs: "write",
+    summary:
+      "State a fact about a node: a predicate from GET predicates, pointing at another node or carrying a value.",
+    fields: FACT_FIELDS,
+    run: async ({ actor, body }) => {
+      const result = await addFact(actor, {
+        subject: asText(body.subject),
+        predicate: asText(body.predicate),
+        object: asText(body.object) || undefined,
+        value: asText(body.value) || undefined,
+        from: asText(body.from) || undefined,
+        until: asText(body.until) || undefined,
+        note: asText(body.note) || undefined,
+        rank: asText(body.rank) || undefined,
+        document: asText(body.document) || undefined,
+        quote: asText(body.quote) || undefined,
+      });
+      if (!result.ok) return invalid(result);
+      return ok({ id: result.id, ...(await getFacts(actor, asText(body.subject))) }, 201);
+    },
+  },
+  {
+    method: "PATCH",
+    path: "facts/:id",
+    needs: "write",
+    summary:
+      "Change a fact's dates, note or rank. (To change what it says, delete it and state it anew.)",
+    fields: "from, until, note, rank (preferred|normal|deprecated)",
+    run: async ({ actor, params, body }) => {
+      const text = (name: string) => (name in body ? asText(body[name]) : undefined);
+      const result = await updateFact(actor, params.id, {
+        from: text("from"),
+        until: text("until"),
+        note: text("note"),
+        rank: text("rank"),
+      });
+      if (!result.ok) return result.status === 404 ? missing("fact") : invalid(result);
+      return ok({ ok: true });
+    },
+  },
+  {
+    method: "DELETE",
+    path: "facts/:id",
+    needs: "write",
+    summary: "Remove a fact.",
+    run: async ({ actor, params }) =>
+      (await deleteFact(actor, params.id)) ? ok({ ok: true }) : missing("fact"),
+  },
+  {
+    method: "GET",
+    path: "predicates",
+    needs: "read",
+    summary:
+      "The kinds of fact this chest knows: what each can be said about and what it points at.",
+    run: async ({ actor }) => ok({ predicates: await listPredicates(actor) }),
+  },
+  {
+    method: "POST",
+    path: "predicates",
+    needs: "admin",
+    summary: "Add a kind of fact to the vocabulary.",
+    fields:
+      "label (read subject to object), inverse (read the other way), value (entity|text|date|number), " +
+      "subjects, objects (lists of kinds; empty for any), symmetric, description",
+    run: async ({ actor, body }) => {
+      const result = await createPredicate(actor, {
+        label: asText(body.label),
+        inverse: asText(body.inverse) || undefined,
+        description: asText(body.description) || undefined,
+        value: asText(body.value),
+        subjects: asList(body.subjects),
+        objects: asList(body.objects),
+        symmetric: body.symmetric === true || asText(body.symmetric) === "yes",
+      });
+      if (!result.ok) return invalid(result);
+      return ok({ key: result.key }, 201);
+    },
+  },
+  {
+    method: "GET",
+    path: "graph",
+    needs: "read",
+    summary:
+      "A node and what is around it. ?center= a node key, ?depth= 1 or 2, ?events=yes to include events.",
+    run: async ({ actor, query }) => {
+      const found = await getNeighbourhood(actor, query.get("center") ?? "", {
+        depth: Number(query.get("depth") ?? 1) || 1,
+        events: query.get("events") === "yes",
+      });
+      return found ? ok(found) : missing("node");
+    },
+  },
+  {
+    method: "GET",
+    path: "path",
+    needs: "read",
+    summary: "How two nodes are connected: the shortest chain of facts between ?from= and ?to=.",
+    run: async ({ actor, query }) => {
+      const found = await findPath(actor, query.get("from") ?? "", query.get("to") ?? "");
+      return found ? ok(found) : missing("node");
     },
   },
 

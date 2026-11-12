@@ -10,6 +10,7 @@ _Arrested Development_. It is the only family data allowed in this repository.
 | `places.json`        | 10 places                                                                      |
 | `events.json`        | Births, marriages, deaths, moves and other dated events, with who took part    |
 | `documents/`         | 43 wiki articles and one family paper (a marriage licence), the written record |
+| `graph.json` | What kind of thing each topic page is, and looser facts (who founded, worked at, owned, lived at), each naming the document it rests on |
 | `questions.jsonl`    | Questions with reference answers, for testing Ask                              |
 | `CORRECTIONS.md`     | How this differs from the earlier `bluth-files` data, and why                  |
 

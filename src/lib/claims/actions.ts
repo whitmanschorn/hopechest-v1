@@ -12,6 +12,7 @@ export const CLAIM_ACTIONS = [
   "update_event",
   "add_place",
   "update_place",
+  "add_fact",
 ] as const;
 export type ClaimAction = (typeof CLAIM_ACTIONS)[number];
 
@@ -26,6 +27,7 @@ export const ACTION_LABELS: Record<string, string> = {
   update_event: "Change an event",
   add_place: "Add a place",
   update_place: "Change a place",
+  add_fact: "Record a fact",
   // Written by the seed for facts that came with the sample family.
   "event.create": "Record an event",
 };
@@ -53,6 +55,13 @@ const FIELD_LABELS: Record<string, string> = {
   endReason: "Ended by",
   label: "Name",
   relation: "Related to",
+  subject: "About",
+  predicate: "Fact",
+  object: "Points at",
+  value: "Value",
+  from: "From",
+  until: "Until",
+  note: "Note",
 };
 
 const sentence = (name: string) =>

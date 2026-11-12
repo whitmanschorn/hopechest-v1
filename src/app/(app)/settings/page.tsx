@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Badge, Button, Code, Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { ApiKeyForm } from "@/components/settings/ApiKeyForm";
 import { ACCESS_LEVELS, listApiKeys } from "@/server/apiKeys/service";
+import { LinkButton } from "@/components/LinkButton";
 import { requireActor } from "@/server/auth/session";
 import { revokeApiKeyAction } from "./actions";
 
@@ -30,6 +31,21 @@ export default async function SettingsPage() {
           </Title>
           <Text c="dimmed">Only admins see this page.</Text>
         </div>
+
+        <Stack gap="xs" component="section">
+          <Title order={2} fz="h3">
+            Vocabulary
+          </Title>
+          <Text c="dimmed" fz="sm">
+            The kinds of fact that can be recorded: “worked at”, “lived at”, “godparent of”. You can
+            add your family’s own.
+          </Text>
+          <div>
+            <LinkButton href="/settings/vocabulary" variant="default" data-testid="open-vocabulary">
+              See and add kinds of fact
+            </LinkButton>
+          </div>
+        </Stack>
 
         <Stack gap="sm" component="section">
           <Title order={2} fz="h3">

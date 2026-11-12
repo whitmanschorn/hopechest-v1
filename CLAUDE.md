@@ -127,6 +127,17 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   passages Ask will cite.
 - A document that recorded facts cite cannot be deleted.
 
+## The graph
+
+- `docs/ontology.md` is the design. Every person, place, event and wiki topic page is a node
+  (`entities`, kept in step by database triggers; never insert or update that table from code
+  except to set a topic page's kind).
+- Looser facts (worked at, lived at, owned, godparent of) are `statements` with a predicate from
+  the vocabulary (`src/lib/graph/vocabulary.ts`). A new built-in kind of fact is one entry there.
+- Parentage, partnerships, birth, death and events stay in their strict tables and are read into
+  the graph as core facts. Do not store those as statements, and do not compute kinship from
+  statements.
+
 ## Wiki
 
 - Prose lives in the wiki (`src/server/wiki/`, `docs/wiki.md`): a page per person, shown on their

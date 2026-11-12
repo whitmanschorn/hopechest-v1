@@ -2,6 +2,7 @@ import { z } from "zod";
 import { splitArguments } from "@/lib/api/match";
 import { isClaimAction, MAX_QUOTE_LENGTH, type ClaimAction } from "@/lib/claims/actions";
 import { getDb } from "@/lib/db";
+import { nodeHref } from "@/lib/graph/vocabulary";
 import { assertCan, type Actor } from "@/server/actor";
 import { TOOLS } from "@/server/mcp/tools";
 
@@ -95,6 +96,13 @@ async function withLinks(claims: ClaimView[]): Promise<ClaimView[]> {
     db.place.findMany({ where: { id: { in: ids("place") } }, select: { id: true, slug: true } }),
   ]);
   const slugs = new Map([...people, ...places].map((row) => [row.id, row.slug]));
+  const statements = await db.statement.findMany({
+    where: { id: { in: ids("statement") } },
+    select: { id: true, subject: { select: { key: true, eventId: true } } },
+  });
+  const factPages = new Map(
+    statements.map((row) => [row.id, nodeHref(row.subject.key, row.subject.eventId)]),
+  );
   return claims.map((claim) => {
     const { applied } = claim;
     if (!applied) return claim;
@@ -106,7 +114,9 @@ async function withLinks(claims: ClaimView[]): Promise<ClaimView[]> {
           ? `/people/${slug}`
           : applied.type === "place" && slug
             ? `/places/${slug}`
-            : null;
+            : applied.type === "statement"
+              ? (factPages.get(applied.id) ?? null)
+              : null;
     return { ...claim, appliedHref };
   });
 }
@@ -334,6 +344,25 @@ export async function acceptClaim(actor: Actor, id: string): Promise<DecideResul
     };
   }
 
+  if (claim.action === "add_fact") {
+    // The fact takes the proposal's source and the words it was read from.
+    const factId = (reply.body as { id?: string }).id;
+    const { sourceId } = await db.claim.findUniqueOrThrow({
+      where: { id },
+      select: { sourceId: true },
+    });
+    if (factId) {
+      await db.statement.update({
+        where: { id: factId },
+        data: { ...(sourceId ? { sourceId } : {}), ...(claim.quote ? { quote: claim.quote } : {}) },
+      });
+      await db.claim.update({
+        where: { id },
+        data: { appliedType: "statement", appliedId: factId },
+      });
+    }
+    return { ok: true, claim: (await getClaim(actor, id))! };
+  }
   const applied = await appliedRow(claim.action, claim.args, reply.body);
   if (applied) await db.claim.update({ where: { id }, data: applied });
   return { ok: true, claim: (await getClaim(actor, id))! };
