@@ -33,6 +33,8 @@ export interface SeedPerson {
   /** Omit when unknown. */
   isLiving?: boolean;
   notes?: string;
+  /** File name (without extension) of the document that becomes their wiki page. */
+  article?: string;
 }
 
 export interface SeedRelationship {
@@ -75,6 +77,24 @@ export interface SeedEvent {
 }
 
 export const DOCUMENT_KINDS = ["article", "record", "letter", "recipe", "story", "other"] as const;
+
+/**
+ * The wiki articles were copied with the tail ends of picture captions left
+ * in: `"]]`, or `" in "Good Grief"]]`, at the start of a line, sometimes run
+ * straight into the paragraph after, or after the sentence before. This removes each one (everything up to
+ * a `]]` that no `[[` on the line opens) and keeps the paragraph.
+ */
+export function stripCaptionLeftovers(text: string): string {
+  return (
+    text
+      .replace(/^[^[\]\n]{0,120}\]\]/gm, "")
+      // The same, where the caption was run into the end of the sentence before it.
+      .replace(/ {2,}[^[\]\n.]{0,80}(?:"[^"\n]*"[^[\]\n]{0,10})?\]\] ?/g, " ")
+      .replace(/ ?"\]\] ?/g, " ")
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+  );
+}
 
 export interface SeedDocument {
   /** File name without extension; the stable key. */
@@ -153,6 +173,9 @@ export function validateSeed(data: SeedData): string[] {
 
   for (const person of data.people) {
     if (!person.displayName?.trim()) problems.push(`person "${person.slug}" has no displayName`);
+    if (person.article && !data.documents.some((doc) => doc.slug === person.article)) {
+      problems.push(`person "${person.slug}": no document "${person.article}" for their article`);
+    }
     if (person.gender && !GENDERS.includes(person.gender)) {
       problems.push(`person "${person.slug}" has unknown gender "${person.gender}"`);
     }
@@ -334,7 +357,7 @@ export function parseSeedDocument(slug: string, file: string): SeedDocument {
     ...(header.scan ? { scan: header.scan } : {}),
     license: header.license ?? "",
     ...(header.retrieved ? { retrieved: header.retrieved } : {}),
-    text: (match ? match[2] : file).trim(),
+    text: stripCaptionLeftovers(match ? match[2] : file).trim(),
   };
 }
 

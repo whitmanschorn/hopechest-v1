@@ -70,6 +70,7 @@ model Person {
   faces             Face[]
   invites           Invite[]
   actingSessions    Session[]          @relation("SessionActingPerson")
+  article           Article?
 
   @@map("people")
 }
@@ -324,9 +325,9 @@ model User {
   lastSeenAt  DateTime? @map("last_seen_at") @db.Timestamptz
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  person         Person?        @relation(fields: [personId], references: [id], onDelete: SetNull)
+  person         Person?           @relation(fields: [personId], references: [id], onDelete: SetNull)
   sessions       Session[]
-  invitesSent    Invite[]       @relation("InviteSender")
+  invitesSent    Invite[]          @relation("InviteSender")
   apiKeys        ApiKey[]
   photos         Photo[]
   documents      Document[]
@@ -335,8 +336,9 @@ model User {
   conversations  Conversation[]
   ingestBatches  IngestBatch[]
   changelog      Changelog[]
-  claimsCreated  Claim[]        @relation("ClaimCreatedBy")
-  claimsReviewed Claim[]        @relation("ClaimReviewedBy")
+  claimsCreated  Claim[]           @relation("ClaimCreatedBy")
+  claimsReviewed Claim[]           @relation("ClaimReviewedBy")
+  articleEdits   ArticleRevision[]
 
   @@map("users")
 }
@@ -437,9 +439,10 @@ model ApiKey {
   revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy     User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
   ingestBatches IngestBatch[]
   changelog     Changelog[]
+  articleEdits  ArticleRevision[]
 
   @@map("api_keys")
 }
@@ -682,6 +685,52 @@ model DocumentChunk {
 
   @@unique([documentId, position])
   @@map("document_chunks")
+}
+
+// ───────────────────────────── wiki ─────────────────────────────────────
+
+/// A page of prose anyone in the family can edit: a person's story, or a topic
+/// of its own ("The banana stand"). Every save keeps a revision.
+model Article {
+  id           String                   @id @default(uuid(7)) @db.Uuid
+  slug         String                   @unique
+  title        String
+  /// Text with light markup: ## headings, lists, **bold**, [[links]].
+  body         String
+  /// Set when this is a person's page. A person has at most one.
+  personId     String?                  @unique @map("person_id") @db.Uuid
+  /// Maintained by a trigger from title and body; see the migration SQL.
+  searchVector Unsupported("tsvector")? @map("search_vector")
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+
+  person    Person?           @relation(fields: [personId], references: [id], onDelete: Cascade)
+  revisions ArticleRevision[]
+
+  @@index([searchVector], type: Gin)
+  @@map("articles")
+}
+
+/// The whole text of an article as it stood after one save.
+model ArticleRevision {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  articleId      String   @map("article_id") @db.Uuid
+  title          String
+  body           String
+  /// What the editor said they changed.
+  summary        String?
+  authorUserId   String?  @map("author_user_id") @db.Uuid
+  authorApiKeyId String?  @map("author_api_key_id") @db.Uuid
+  /// Shown when the author is not a member: an import, or text under a licence.
+  authorLabel    String?  @map("author_label")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  article      Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  authorUser   User?   @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorApiKey ApiKey? @relation(fields: [authorApiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([articleId, createdAt])
+  @@map("article_revisions")
 }
 
 // ───────────────────────────── ingest ───────────────────────────────────

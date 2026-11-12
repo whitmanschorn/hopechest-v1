@@ -32,6 +32,7 @@ of date. In short:
 | Photos         | list (optionally one person's), get, change details, delete                               |
 | Albums         | list, get, add, change, delete                                                            |
 | Documents      | list and search by words, get, add from text, change (including setting the text), delete |
+| Wiki           | list pages, read and write a topic page or a person's page, page history (`docs/wiki.md`) |
 | Ingest         | start a batch, add a file to it, finish it; list, date, publish and discard for review    |
 | Proposed facts | propose, list, accept, reject (`docs/facts.md`)                                           |
 

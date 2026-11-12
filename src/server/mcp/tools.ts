@@ -171,6 +171,29 @@ export const TOOLS: readonly McpTool[] = [
     },
   },
   {
+    name: "list_articles",
+    title: "List wiki pages",
+    description:
+      "Every wiki page: topic pages (houses, businesses, traditions) and the people who have been written about, each with its opening words.",
+    route: "GET articles",
+    input: {},
+  },
+  {
+    name: "get_article",
+    title: "Read a topic page",
+    description: "The text of one topic page of the wiki.",
+    route: "GET articles/:slug",
+    input: { slug: z.string().describe("Slug of the page, from list_articles") },
+  },
+  {
+    name: "get_person_article",
+    title: "Read what is written about a person",
+    description:
+      "A person's wiki page: their story in prose. get_person gives the recorded facts; this gives what the family has written about them.",
+    route: "GET people/:slug/article",
+    input: { slug: slug("the person") },
+  },
+  {
     name: "person_history",
     title: "Edit history of a person",
     description: "Who changed what on a person's record, newest first.",
@@ -384,6 +407,47 @@ export const TOOLS: readonly McpTool[] = [
       kind: documentKind.optional(),
       date: date("When it was written"),
       text: z.string().optional().describe("The full text; replaces what was there"),
+    },
+  },
+
+  // ── the wiki ──
+  {
+    name: "write_person_article",
+    title: "Write about a person",
+    description:
+      "Write or change a person's wiki page: the story of their life in prose, as the family tells it. Prefer `append` to add a passage; `body` replaces the whole text, so read the page first and keep what others wrote. Write [[Name]] to link to a person or page. Facts such as dates still belong in the record: propose them with propose_fact as well.",
+    route: "PATCH people/:slug/article",
+    input: {
+      slug: slug("the person"),
+      body: z.string().optional().describe("The whole text of the page; replaces what is there"),
+      append: z.string().optional().describe("Text to add to the end of the page"),
+      summary: z.string().optional().describe("What you changed, for the page's history"),
+    },
+  },
+  {
+    name: "add_article",
+    title: "Start a topic page",
+    description:
+      "Start a wiki page about something that is not one person: a house, a business, a tradition, a trip.",
+    route: "POST articles",
+    input: {
+      title: z.string(),
+      body: z.string().describe("The text. ## for headings, - for lists, [[Name]] for links"),
+      summary: z.string().optional(),
+    },
+  },
+  {
+    name: "write_article",
+    title: "Change a topic page",
+    description:
+      "Change a topic page. Prefer `append`; `body` replaces the whole text, so read the page first and keep what others wrote.",
+    route: "PATCH articles/:slug",
+    input: {
+      slug: z.string().describe("Slug of the page"),
+      title: z.string().optional(),
+      body: z.string().optional().describe("The whole text; replaces what is there"),
+      append: z.string().optional().describe("Text to add to the end"),
+      summary: z.string().optional().describe("What you changed, for the page's history"),
     },
   },
 

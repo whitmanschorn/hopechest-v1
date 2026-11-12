@@ -1,0 +1,98 @@
+.body {
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.body h2 {
+  font-family: var(--mantine-font-family-headings);
+  font-size: var(--mantine-h3-font-size);
+  margin: var(--mantine-spacing-lg) 0 var(--mantine-spacing-xs);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--hc-hairline);
+  scroll-margin-top: 80px;
+}
+
+.body h3 {
+  font-size: var(--mantine-font-size-lg);
+  margin: var(--mantine-spacing-md) 0 var(--mantine-spacing-xs);
+  scroll-margin-top: 80px;
+}
+
+.body > :first-child {
+  margin-top: 0;
+}
+
+.body p,
+.body ul,
+.body ol,
+.body blockquote {
+  margin: 0 0 var(--mantine-spacing-sm);
+}
+
+.body ul,
+.body ol {
+  padding-left: 1.4em;
+}
+
+.body blockquote {
+  padding: 2px var(--mantine-spacing-md);
+  border-left: 3px solid var(--hc-hairline);
+  color: var(--mantine-color-dimmed);
+}
+
+.body a {
+  color: var(--mantine-color-anchor);
+  text-decoration: none;
+}
+
+.body a:hover {
+  text-decoration: underline;
+}
+
+/* A link to a page nobody has written yet. */
+.body a.missing {
+  color: var(--mantine-color-red-7);
+  border-bottom: 1px dashed currentColor;
+}
+
+.added,
+.removed,
+.same {
+  display: block;
+  padding: 1px var(--mantine-spacing-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--mantine-font-size-sm);
+  min-height: 1.5em;
+}
+
+.added {
+  background: color-mix(in srgb, var(--mantine-color-green-5) 22%, transparent);
+}
+
+.removed {
+  background: color-mix(in srgb, var(--mantine-color-red-5) 20%, transparent);
+  text-decoration: line-through;
+}
+
+.same {
+  color: var(--mantine-color-dimmed);
+}
+
+.gap {
+  display: block;
+  text-align: center;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.row {
+  padding: var(--mantine-spacing-sm) 0;
+  border-bottom: 1px solid var(--hc-hairline);
+}
+
+.editor textarea {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+}

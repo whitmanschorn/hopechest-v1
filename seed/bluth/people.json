@@ -4,11 +4,16 @@
     "displayName": "George Bluth Sr.",
     "givenName": "George",
     "familyName": "Bluth",
-    "nicknames": ["Pop-Pop"],
-    "alternateNames": ["George Oscar Bluth Sr."],
+    "nicknames": [
+      "Pop-Pop"
+    ],
+    "alternateNames": [
+      "George Oscar Bluth Sr."
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Founder of the Bluth Company and identical twin of Oscar. Arrested by the SEC at his retirement party in 2003 for fraud; later investigated for \"light treason\" over homes built in Iraq. Inventor of the Cornballer."
+    "notes": "Founder of the Bluth Company and identical twin of Oscar. Arrested by the SEC at his retirement party in 2003 for fraud; later investigated for \"light treason\" over homes built in Iraq. Inventor of the Cornballer.",
+    "article": "george-bluth"
   },
   {
     "slug": "lucille",
@@ -18,38 +23,50 @@
     "birthFamilyName": "Jenkins",
     "gender": "female",
     "isLiving": true,
-    "notes": "Matriarch; lives in the Balboa Towers penthouse. Worked as a waitress at a Stuckey's when she met George. Arrested for sinking the RMS Queen Mary in 2006. No record of her birth date."
+    "notes": "Matriarch; lives in the Balboa Towers penthouse. Worked as a waitress at a Stuckey's when she met George. Arrested for sinking the RMS Queen Mary in 2006. No record of her birth date.",
+    "article": "lucille-bluth"
   },
   {
     "slug": "oscar",
     "displayName": "Oscar Bluth",
     "givenName": "Oscar",
     "familyName": "Bluth",
-    "alternateNames": ["Oscar George Bluth"],
+    "alternateNames": [
+      "Oscar George Bluth"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "George Sr.'s identical twin. Served in Vietnam, where he met Lucille before she left him for George. Wrote the song \"All You Need Is Smiles\". Lives in a trailer outside Camp Pendleton. Likely the biological father of Buster. More than once jailed in George's place."
+    "notes": "George Sr.'s identical twin. Served in Vietnam, where he met Lucille before she left him for George. Wrote the song \"All You Need Is Smiles\". Lives in a trailer outside Camp Pendleton. Likely the biological father of Buster. More than once jailed in George's place.",
+    "article": "oscar-bluth"
   },
   {
     "slug": "gob",
     "displayName": "G.O.B. Bluth",
     "givenName": "George Oscar",
     "familyName": "Bluth",
-    "nicknames": ["G.O.B."],
-    "alternateNames": ["George Oscar Bluth II"],
+    "nicknames": [
+      "G.O.B."
+    ],
+    "alternateNames": [
+      "George Oscar Bluth II"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Eldest son; magician and founder of the Alliance of Magicians, which expelled him in 2003. Father of Steve Holt. Briefly married a woman on a dare and never learned her name. Was engaged to Ann Veal but skipped the wedding. No record of his birth date."
+    "notes": "Eldest son; magician and founder of the Alliance of Magicians, which expelled him in 2003. Father of Steve Holt. Briefly married a woman on a dare and never learned her name. Was engaged to Ann Veal but skipped the wedding. No record of his birth date.",
+    "article": "gob"
   },
   {
     "slug": "michael",
     "displayName": "Michael Bluth",
     "givenName": "Michael",
     "familyName": "Bluth",
-    "alternateNames": ["Nichael Bluth"],
+    "alternateNames": [
+      "Nichael Bluth"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Second son; runs the Bluth Company after his father's arrest. Widower of Tracey and father of George Michael. His birth certificate reads \"Nichael\" because of a typo. Raised as Lindsay's twin."
+    "notes": "Second son; runs the Bluth Company after his father's arrest. Widower of Tracey and father of George Michael. His birth certificate reads \"Nichael\" because of a typo. Raised as Lindsay's twin.",
+    "article": "michael-bluth"
   },
   {
     "slug": "lindsay",
@@ -57,73 +74,102 @@
     "givenName": "Lindsay",
     "familyName": "Fünke",
     "birthFamilyName": "Bluth",
-    "alternateNames": ["Nellie"],
+    "alternateNames": [
+      "Nellie"
+    ],
     "gender": "female",
     "isLiving": true,
-    "notes": "Adopted by George Sr. and Lucille at the age of three, before Stan Sitwell could adopt her, and raised as Michael's twin. Her birth name was Nellie and her real birthday is unknown; she celebrates December 14 with Michael. She is three years older than she was told. Her biological mother was Mimi, which makes her Lucille's half-sister. Married to Tobias; mother of Maeby."
+    "notes": "Adopted by George Sr. and Lucille at the age of three, before Stan Sitwell could adopt her, and raised as Michael's twin. Her birth name was Nellie and her real birthday is unknown; she celebrates December 14 with Michael. She is three years older than she was told. Her biological mother was Mimi, which makes her Lucille's half-sister. Married to Tobias; mother of Maeby.",
+    "article": "lindsay-bluth-funke"
   },
   {
     "slug": "buster",
     "displayName": "Buster Bluth",
     "givenName": "Byron",
     "familyName": "Bluth",
-    "nicknames": ["Buster"],
-    "alternateNames": ["Byron Bluth"],
+    "nicknames": [
+      "Buster"
+    ],
+    "alternateNames": [
+      "Byron Bluth"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Youngest son. Raised as George Sr.'s; his biological father is most likely Oscar. Signed up for the Army by Lucille in 2004; lost his left hand to a seal in 2005. Long on-and-off relationship with Lucille Austero. Never married."
+    "notes": "Youngest son. Raised as George Sr.'s; his biological father is most likely Oscar. Signed up for the Army by Lucille in 2004; lost his left hand to a seal in 2005. Long on-and-off relationship with Lucille Austero. Never married.",
+    "article": "buster-bluth"
   },
   {
     "slug": "tobias",
     "displayName": "Tobias Fünke",
     "givenName": "Tobias",
     "familyName": "Fünke",
-    "alternateNames": ["Tobias Onyango Fünke", "Mrs. Featherbottom"],
+    "alternateNames": [
+      "Tobias Onyango Fünke",
+      "Mrs. Featherbottom"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Lindsay's husband and Maeby's father. Born in Wisconsin. Practised as both a psychoanalyst and a psychotherapist in Massachusetts until he lost his licence after giving CPR to a sleeping man. Aspiring actor. Posed as the housekeeper Mrs. Featherbottom to be near his family. No record of his birth date."
+    "notes": "Lindsay's husband and Maeby's father. Born in Wisconsin. Practised as both a psychoanalyst and a psychotherapist in Massachusetts until he lost his licence after giving CPR to a sleeping man. Aspiring actor. Posed as the housekeeper Mrs. Featherbottom to be near his family. No record of his birth date.",
+    "article": "tobias-funke"
   },
   {
     "slug": "tracey",
     "displayName": "Tracey Bluth",
     "givenName": "Tracey",
     "familyName": "Bluth",
-    "alternateNames": ["Tracy Bluth"],
+    "alternateNames": [
+      "Tracy Bluth"
+    ],
     "gender": "female",
     "isLiving": false,
-    "notes": "Michael's wife and George Michael's mother. Died of ovarian cancer in the family beach cottage after several months in a coma. Family name before marriage is not recorded."
+    "notes": "Michael's wife and George Michael's mother. Died of ovarian cancer in the family beach cottage after several months in a coma. Family name before marriage is not recorded.",
+    "article": "tracey-bluth"
   },
   {
     "slug": "george-michael",
     "displayName": "George Michael Bluth",
     "givenName": "George Michael",
     "familyName": "Bluth",
-    "alternateNames": ["George Maharis"],
+    "alternateNames": [
+      "George Maharis"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Michael and Tracey's only child. Worked at the frozen banana stand. Accidentally and legally married his cousin Maeby in 2006. Created Fakeblock under the name George Maharis."
+    "notes": "Michael and Tracey's only child. Worked at the frozen banana stand. Accidentally and legally married his cousin Maeby in 2006. Created Fakeblock under the name George Maharis.",
+    "article": "george-michael-bluth"
   },
   {
     "slug": "maeby",
     "displayName": "Maeby Fünke",
     "givenName": "Mae",
     "familyName": "Fünke",
-    "nicknames": ["Maeby"],
-    "alternateNames": ["Mae Fünke", "Surely Fünke"],
+    "nicknames": [
+      "Maeby"
+    ],
+    "alternateNames": [
+      "Mae Fünke",
+      "Surely Fünke"
+    ],
     "gender": "female",
     "isLiving": true,
-    "notes": "Lindsay and Tobias's daughter. Talked her way into a job as a film executive at Tantamount Studios while still at school. Invented a sick sister, Surely, to raise money."
+    "notes": "Lindsay and Tobias's daughter. Talked her way into a job as a film executive at Tantamount Studios while still at school. Invented a sick sister, Surely, to raise money.",
+    "article": "maeby-funke"
   },
   {
     "slug": "annyong",
     "displayName": "Annyong Bluth",
     "givenName": "Hel-loh",
     "familyName": "Bluth",
-    "nicknames": ["Annyong"],
-    "alternateNames": ["Hel-loh Bluth"],
+    "nicknames": [
+      "Annyong"
+    ],
+    "alternateNames": [
+      "Hel-loh Bluth"
+    ],
     "gender": "male",
     "isLiving": true,
-    "notes": "Adopted from Korea by George Sr. and Lucille in 2004 to look charitable. The family took his greeting, \"annyong\" (hello), for his name; his real name is Hel-loh, which he reveals in 2006. Grandson of the Korean immigrant from whom George took the idea for the banana stand."
+    "notes": "Adopted from Korea by George Sr. and Lucille in 2004 to look charitable. The family took his greeting, \"annyong\" (hello), for his name; his real name is Hel-loh, which he reveals in 2006. Grandson of the Korean immigrant from whom George took the idea for the banana stand.",
+    "article": "annyong-bluth"
   },
   {
     "slug": "steve-holt",
@@ -132,7 +178,8 @@
     "familyName": "Holt",
     "gender": "male",
     "isLiving": true,
-    "notes": "G.O.B.'s son with Eve Holt. A third-year high-school senior and football star when he traced his father through S.A.D. No record of his birth date."
+    "notes": "G.O.B.'s son with Eve Holt. A third-year high-school senior and football star when he traced his father through S.A.D. No record of his birth date.",
+    "article": "steve-holt"
   },
   {
     "slug": "eve-holt",
@@ -140,7 +187,8 @@
     "givenName": "Eve",
     "familyName": "Holt",
     "gender": "female",
-    "notes": "Steve Holt's mother. Had a brief fling with G.O.B. in high school."
+    "notes": "Steve Holt's mother. Had a brief fling with G.O.B. in high school.",
+    "article": "eve-holt"
   },
   {
     "slug": "mimi",
@@ -154,9 +202,12 @@
     "displayName": "Lucille Austero",
     "givenName": "Lucille",
     "familyName": "Austero",
-    "nicknames": ["Lucille 2"],
+    "nicknames": [
+      "Lucille 2"
+    ],
     "gender": "female",
     "isLiving": false,
-    "notes": "Lucille Bluth's neighbour and rival at Balboa Towers; a widow. Buster's on-and-off partner. Bought into the Bluth Company and ran for Congress against Herbert Love. Went missing at Cinco de Cuatro in 2012 and was later found to have died there."
+    "notes": "Lucille Bluth's neighbour and rival at Balboa Towers; a widow. Buster's on-and-off partner. Bought into the Bluth Company and ran for Congress against Herbert Love. Went missing at Cinco de Cuatro in 2012 and was later found to have died there.",
+    "article": "lucille-austero"
   }
 ]
