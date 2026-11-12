@@ -29,6 +29,9 @@ export async function savePhotoAction(_: PhotoFormState, form: FormData): Promis
     people: String(form.get("people") ?? "")
       .split(",")
       .filter(Boolean),
+    albums: String(form.get("albums") ?? "")
+      .split(",")
+      .filter(Boolean),
   };
   const result = await updatePhoto(actor, id, input);
   if (!result.ok) return { input, errors: result.errors };

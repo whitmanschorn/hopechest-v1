@@ -56,7 +56,14 @@ async function send(
 }
 
 /** Drop or pick pictures; each is uploaded, then turned into a photo. */
-export function Uploader({ mode }: { mode: "blob" | "local" }) {
+export function Uploader({
+  mode,
+  album,
+}: {
+  mode: "blob" | "local";
+  /** When set, every picture added goes into this album. */
+  album?: { id: string; title: string };
+}) {
   const [items, setItems] = useState<Item[]>([]);
   // Set once the page is interactive; files chosen before that would be lost.
   const ready = useMounted();
@@ -80,7 +87,7 @@ export function Uploader({ mode }: { mode: "blob" | "local" }) {
           const response = await fetch("/api/photos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key, filename: file.name }),
+            body: JSON.stringify({ key, filename: file.name, albumId: album?.id }),
           });
           const result = await response.json().catch(() => null);
           if (!response.ok) throw new Error(result?.error ?? "Something went wrong.");
@@ -196,8 +203,12 @@ export function Uploader({ mode }: { mode: "blob" | "local" }) {
           ))}
           {allDone && (
             <Group>
-              <Button component={Link} href="/photos" data-testid="upload-done">
-                See them in Photos
+              <Button
+                component={Link}
+                href={album ? `/albums/${album.id}` : "/photos"}
+                data-testid="upload-done"
+              >
+                {album ? `See them in ${album.title}` : "See them in Photos"}
               </Button>
             </Group>
           )}
