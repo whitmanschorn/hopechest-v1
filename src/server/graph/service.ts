@@ -264,6 +264,8 @@ const RANK_ORDER = { PREFERRED: 0, NORMAL: 1, DEPRECATED: 2 } as const;
 export async function getFacts(
   actor: Actor,
   key: string,
+  /** Pass `core: false` to leave out the facts from the strict tables, and the work of reading them. */
+  options: { core?: boolean } = {},
 ): Promise<{ node: NodeRef; facts: Fact[]; canEdit: boolean } | null> {
   assertCan(actor, "read");
   if (!parseKey(key)) return null;
@@ -342,12 +344,24 @@ export async function getFacts(
       sort: 1e9 + (sort ?? 99_999_999),
     });
   };
-  const nodeOf = async (where: { personId?: string; placeId?: string; eventId?: string }) => {
-    const row = await db.entity.findFirst({ where, select: entityFields });
-    return row ? toRef(row) : null;
+  // Core facts are gathered first with the ids of what they point at, then all
+  // those nodes are fetched in one query rather than one each.
+  type Pending = {
+    predicate: string;
+    side: "subject" | "object";
+    target: { personId?: string; placeId?: string; eventId?: string };
+    fields: Partial<Fact> & { sort?: number };
   };
+  const pending: Pending[] = [];
+  const later = (
+    predicate: string,
+    side: "subject" | "object",
+    target: Pending["target"],
+    fields: Pending["fields"] = {},
+  ) => pending.push({ predicate, side, target, fields });
+  const wantCore = options.core !== false;
 
-  if (node.personId) {
+  if (wantCore && node.personId) {
     const slug = parseKey(node.key)!.slug;
     const person = await getPerson(actor, slug);
     if (person) {
@@ -370,54 +384,78 @@ export async function getFacts(
       ] as const;
       for (const [predicate, side, relatives] of groups) {
         for (const relative of relatives) {
-          const other = await nodeOf({ personId: relative.id });
-          if (other) core(predicate, side, { other, note: about(relative) });
+          later(predicate, side, { personId: relative.id }, { note: about(relative) });
         }
       }
       for (const event of person.events) {
-        const other = await nodeOf({ eventId: event.id });
-        if (!other) continue;
-        core("took_part_in", "subject", {
-          other,
-          from: event.date ? describe(event.date) : null,
-          sort: event.date ? (toColumns(event.date).dateSortKey ?? undefined) : undefined,
-        });
+        later(
+          "took_part_in",
+          "subject",
+          { eventId: event.id },
+          {
+            from: event.date ? describe(event.date) : null,
+            sort: event.date ? (toColumns(event.date).dateSortKey ?? undefined) : undefined,
+          },
+        );
       }
     }
   }
-  if (node.eventId) {
+  if (wantCore && node.eventId) {
     const event = await db.event.findUnique({
       where: { id: node.eventId },
       include: { participants: true },
     });
     for (const part of event?.participants ?? []) {
-      const other = await nodeOf({ personId: part.personId });
-      if (other) {
-        core("took_part_in", "object", {
-          other,
+      later(
+        "took_part_in",
+        "object",
+        { personId: part.personId },
+        {
           note: part.role === "SUBJECT" ? null : part.role.toLowerCase(),
-        });
-      }
+        },
+      );
     }
-    if (event?.placeId) {
-      const other = await nodeOf({ placeId: event.placeId });
-      if (other) core("happened_at", "subject", { other });
-    }
+    if (event?.placeId) later("happened_at", "subject", { placeId: event.placeId });
   }
-  if (node.placeId) {
+  if (wantCore && node.placeId) {
     const events = await db.event.findMany({
       where: { placeId: node.placeId },
       select: { id: true, dateSortKey: true, dateDisplay: true },
     });
     for (const event of events) {
-      const other = await nodeOf({ eventId: event.id });
-      if (other) {
-        core("happened_at", "object", {
-          other,
+      later(
+        "happened_at",
+        "object",
+        { eventId: event.id },
+        {
           from: event.dateDisplay,
           sort: event.dateSortKey ?? undefined,
-        });
-      }
+        },
+      );
+    }
+  }
+  if (pending.length > 0) {
+    const ids = (name: "personId" | "placeId" | "eventId") =>
+      pending.flatMap((entry) => (entry.target[name] ? [entry.target[name]!] : []));
+    const found = await db.entity.findMany({
+      where: {
+        OR: [
+          { personId: { in: ids("personId") } },
+          { placeId: { in: ids("placeId") } },
+          { eventId: { in: ids("eventId") } },
+        ],
+      },
+      select: { ...entityFields, personId: true, placeId: true },
+    });
+    for (const entry of pending) {
+      const { personId, placeId, eventId } = entry.target;
+      const row = found.find(
+        (candidate) =>
+          (personId && candidate.personId === personId) ||
+          (placeId && candidate.placeId === placeId) ||
+          (eventId && candidate.eventId === eventId),
+      );
+      if (row) core(entry.predicate, entry.side, { ...entry.fields, other: toRef(row) });
     }
   }
 

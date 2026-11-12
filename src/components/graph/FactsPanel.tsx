@@ -31,7 +31,10 @@ export async function FactsPanel({
   nodeKey: string;
   core: boolean;
 }) {
-  const [found, predicates] = await Promise.all([getFacts(actor, nodeKey), listPredicates(actor)]);
+  const [found, predicates] = await Promise.all([
+    getFacts(actor, nodeKey, { core }),
+    listPredicates(actor),
+  ]);
   if (!found) return null;
   const facts = found.facts.filter((fact) => core || !fact.core);
   const groups = Object.entries(GROUP_LABELS)
