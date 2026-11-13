@@ -5,6 +5,7 @@ import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { countLabels, sourceLabel } from "@/lib/ingest/labels";
 import { requireActor } from "@/server/auth/session";
 import { listClaims } from "@/server/claims/service";
+import { countWaitingFaces } from "@/server/faces/service";
 import { listBatches } from "@/server/ingest/service";
 import classes from "@/components/review/ReviewBoard.module.css";
 
@@ -14,7 +15,11 @@ const day = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 export default async function ReviewPage() {
   const actor = await requireActor("write");
-  const [batches, { waiting }] = await Promise.all([listBatches(actor), listClaims(actor)]);
+  const [batches, { waiting }, faces] = await Promise.all([
+    listBatches(actor),
+    listClaims(actor),
+    countWaitingFaces(actor),
+  ]);
   return (
     <Container size="md" py="xl">
       <Stack gap="lg">
@@ -28,7 +33,7 @@ export default async function ReviewPage() {
           </Text>
         </div>
 
-        <ReviewTabs current="arrivals" waitingFacts={waiting} />
+        <ReviewTabs current="arrivals" waitingFacts={waiting} waitingFaces={faces} />
 
         {batches.length === 0 ? (
           <Paper withBorder p="lg" data-testid="review-empty">

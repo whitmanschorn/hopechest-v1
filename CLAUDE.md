@@ -118,6 +118,15 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   JSON sidecars (`src/lib/ingest/sidecar.ts`), so there is one way in. `docs/facebook.md` covers
   the export converter and the procedure for capturing in the browser.
 
+## Faces
+
+- `docs/faces.md` is the design. The model runs only in the command-line tool
+  (`hopechest scan-faces`, `cli/lib/detect.ts`); the server stores what it found and does
+  arithmetic on vectors (`src/server/faces/`, `src/lib/faces/`). Never import the model from `src/`.
+- A face gets a `personId` only when a person says so (`nameFaces`), or when it sits under a box
+  someone drew. Guesses are computed on each visit and never stored.
+- Specs send made-up vectors through the API; they never run the model on other specs' photos.
+
 ## Documents
 
 - Documents (`src/server/documents/`, `docs/documents.md`) hold text plus, optionally, the original

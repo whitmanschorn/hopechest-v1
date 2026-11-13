@@ -5,6 +5,14 @@ import { toFormInput, type PersonFormInput } from "@/lib/people/personEdit";
 import { toPlaceFormInput, type PlaceFormInput } from "@/lib/places/placeEdit";
 import type { Actor, Permission } from "@/server/actor";
 import {
+  getFaceQueue,
+  ignoreFaces,
+  listUnscanned,
+  nameFaces,
+  recordFaces,
+  rejectFaces,
+} from "@/server/faces/service";
+import {
   addFact,
   createPredicate,
   deleteFact,
@@ -599,6 +607,97 @@ export const ROUTES: readonly ApiRoute[] = [
       if (!(await getPhoto(actor, params.id))) return missing("photo");
       await deletePhoto(actor, params.id);
       return ok({ ok: true });
+    },
+  },
+
+  // ── faces ──
+  {
+    method: "GET",
+    path: "faces/unscanned",
+    needs: "ingest",
+    summary:
+      "Photos not yet looked over for faces, newest first (?limit=, at most 200), the model to use and how many remain.",
+    run: async ({ actor, query }) =>
+      ok(await listUnscanned(actor, { limit: Number(query.get("limit")) || undefined })),
+  },
+  {
+    method: "POST",
+    path: "photos/:id/faces",
+    needs: "ingest",
+    summary:
+      "Store the faces a scan found in one photo (an empty list for none). Replaces what an earlier scan found; faces people have named are kept.",
+    fields:
+      "model (from GET faces/unscanned), faces (list of { box: { x, y, w, h } in percentages of the picture, score (0–1), embedding (128 numbers) })",
+    run: async ({ actor, params, body }) => {
+      const result = await recordFaces(actor, params.id, {
+        model: asText(body.model),
+        faces: body.faces,
+      });
+      if (!result.ok) {
+        return {
+          status: result.status,
+          body: {
+            error: result.status === 404 ? "not_found" : "invalid",
+            message: result.message,
+          },
+        };
+      }
+      return ok({ faces: result.faces, linked: result.linked });
+    },
+  },
+  {
+    method: "GET",
+    path: "faces",
+    needs: "write",
+    summary:
+      "Faces nobody has named, in groups that are probably one person each, biggest first, each with a suggestion where there is one. ?photo=<id> for one photo's; ?page= for more groups.",
+    run: async ({ actor, query }) =>
+      ok(
+        await getFaceQueue(actor, {
+          photoId: query.get("photo") ?? undefined,
+          page: Number(query.get("page")) || undefined,
+        }),
+      ),
+  },
+  {
+    method: "POST",
+    path: "faces/name",
+    needs: "write",
+    summary:
+      "Say whose faces these are. Each becomes a tag on its photo and helps recognise that person from then on.",
+    fields: "faces (list of face ids), person (slug)",
+    run: async ({ actor, body }) => {
+      const result = await nameFaces(actor, {
+        faceIds: asList(body.faces),
+        person: asText(body.person),
+      });
+      return result.ok ? ok({ named: result.count }) : invalid(result);
+    },
+  },
+  {
+    method: "POST",
+    path: "faces/reject",
+    needs: "write",
+    summary: "Say these faces are NOT a person, so that person is not suggested for them again.",
+    fields: "faces (list of face ids), person (slug)",
+    run: async ({ actor, body }) => {
+      const result = await rejectFaces(actor, {
+        faceIds: asList(body.faces),
+        person: asText(body.person),
+      });
+      return result.ok ? ok({ ruledOut: result.count }) : invalid(result);
+    },
+  },
+  {
+    method: "POST",
+    path: "faces/ignore",
+    needs: "write",
+    summary:
+      "Set faces aside as nobody to name (a stranger, a statue, not a face). They leave the queue.",
+    fields: "faces (list of face ids)",
+    run: async ({ actor, body }) => {
+      const result = await ignoreFaces(actor, { faceIds: asList(body.faces) });
+      return result.ok ? ok({ ignored: result.count }) : invalid(result);
     },
   },
 
