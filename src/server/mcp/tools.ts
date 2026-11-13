@@ -53,6 +53,23 @@ const relationFields = {
 };
 
 const documentKind = z.enum(["letter", "record", "recipe", "story", "article", "other"]);
+const nodeKey = z
+  .string()
+  .describe(
+    'Key of a node: "person:<slug>", "place:<slug>", "page:<slug>" (a wiki topic) or "event:<slug>"',
+  );
+const factFields = {
+  subject: nodeKey.describe("Key of the node the fact is about"),
+  predicate: z.string().describe("Key of the kind of fact, from list_fact_kinds"),
+  object: z.string().optional().describe("Key of the node it points at, for a link"),
+  value: z.string().optional().describe("The value, for words, a date or a number"),
+  from: date("When it began to be true"),
+  until: date("When it stopped being true"),
+  note: z.string().optional().describe('A few words more: "as bookkeeper"'),
+  rank: z.enum(["preferred", "normal", "deprecated"]).optional(),
+  document: z.string().optional().describe("Id of the document it comes from"),
+  quote: z.string().optional().describe("The words in the document that say so"),
+};
 const eventKind = z.enum([
   "birth",
   "death",
@@ -169,6 +186,58 @@ export const TOOLS: readonly McpTool[] = [
         .describe('Words to look for; "quoted phrases", OR and -word work as in a web search'),
       kind: documentKind.optional(),
     },
+  },
+  {
+    name: "find_nodes",
+    title: "Find anything in the family graph",
+    description:
+      "Find people, places, events and wiki topics (companies, houses, pets, heirlooms) by name. Gives each one's key, such as person:lucille or page:bluth-company, which the graph tools take.",
+    route: "GET nodes",
+    input: {
+      q: z.string().optional().describe("Part of the name"),
+      kind: z
+        .string()
+        .optional()
+        .describe(
+          "Narrow to kinds, comma-separated: person, place, event, topic, organization, group, thing, animal",
+        ),
+    },
+  },
+  {
+    name: "get_node",
+    title: "Everything about one node",
+    description:
+      "One node of the family graph with every fact about it, read from its side: what it is said to be and do, and what else points at it. Covers kinship, events, and everything looser (work, homes, ownership, friendships). Each fact has its dates, note, rank and source.",
+    route: "GET nodes/:key",
+    input: { key: nodeKey },
+  },
+  {
+    name: "list_fact_kinds",
+    title: "List the kinds of fact",
+    description:
+      "The vocabulary: every kind of fact that can be stated, what it can be said about, and whether it points at another node or carries a value.",
+    route: "GET predicates",
+    input: {},
+  },
+  {
+    name: "explore_graph",
+    title: "What is around a node",
+    description:
+      "A node and everything within one or two steps of it, as nodes and labelled edges.",
+    route: "GET graph",
+    input: {
+      center: nodeKey,
+      depth: z.number().int().min(1).max(2).optional(),
+      events: z.enum(["yes"]).optional().describe("Include events, which are left out by default"),
+    },
+  },
+  {
+    name: "find_connection",
+    title: "How two things are connected",
+    description:
+      'The shortest chain of facts between two nodes: how a cousin and a house, or two people, are connected. For "how is X related to Y" between two people, resolve_kin is better; this follows every kind of fact.',
+    route: "GET path",
+    input: { from: nodeKey, to: nodeKey },
   },
   {
     name: "list_articles",
@@ -410,6 +479,46 @@ export const TOOLS: readonly McpTool[] = [
     },
   },
 
+  // ── the graph ──
+  {
+    name: "add_fact",
+    title: "State a fact",
+    description:
+      'State a fact about a node of the family graph: that someone worked somewhere, lived somewhere, owned something, was someone\'s godparent. `predicate` is a key from list_fact_kinds; it points at another node (`object`) or carries a `value`. Parentage, partners, birth, death and events are NOT stated this way: use add_relationship, update_person and add_event. If you read or worked the fact out rather than being told it, use propose_fact with action "add_fact" instead.',
+    route: "POST facts",
+    input: factFields,
+  },
+  {
+    name: "update_fact",
+    title: "Change a fact's dates, note or rank",
+    description:
+      "Change when a fact held, its note, or its rank. Rank says which account the family goes by when sources disagree: preferred, normal, or deprecated (kept for the record, known to be wrong).",
+    route: "PATCH facts/:id",
+    input: {
+      id: id("the fact"),
+      from: z.string().optional(),
+      until: z.string().optional(),
+      note: z.string().optional(),
+      rank: z.enum(["preferred", "normal", "deprecated"]).optional(),
+    },
+  },
+  {
+    name: "remove_fact",
+    title: "Remove a fact",
+    description:
+      "Remove a fact that should not be there. Prefer rank deprecated for one that a source really does state but that is wrong.",
+    route: "DELETE facts/:id",
+    input: { id: id("the fact") },
+  },
+  {
+    name: "set_page_kind",
+    title: "Say what kind of thing a wiki page is",
+    description:
+      "Mark a wiki topic page as an organization, a group, a thing or an animal, which decides which facts suit it.",
+    route: "PATCH nodes/:key",
+    input: { key: nodeKey, kind: z.enum(["topic", "organization", "group", "thing", "animal"]) },
+  },
+
   // ── the wiki ──
   {
     name: "write_person_article",
@@ -472,6 +581,7 @@ export const TOOLS: readonly McpTool[] = [
         "update_event",
         "add_place",
         "update_place",
+        "add_fact",
       ]),
       args: z.record(z.string(), z.unknown()).describe("What the tool named by `action` takes"),
       document: z.string().optional().describe("Id of the document the fact was read from"),

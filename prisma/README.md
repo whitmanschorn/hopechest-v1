@@ -27,15 +27,17 @@ disagree or a rule below is broken (`npm run db:check` runs the same checks loca
 Prisma cannot express these, so they live only in migration SQL. Prisma leaves them alone; do not
 drop them.
 
-| What                                              | Where           | Why                                                         |
-| ------------------------------------------------- | --------------- | ----------------------------------------------------------- |
-| `CREATE EXTENSION vector`                         | `init`          | Face embeddings                                             |
-| `reactions_one_target_check`                      | `init`          | A reaction targets a photo or a comment, never both         |
-| `relationships_not_self_check`                    | `init`          | No one is their own parent or partner                       |
-| `*_date_range_check` on events, photos, documents | `init`          | Month 1–12, day 1–31                                        |
-| `documents_search_vector_trigger`                 | `init`          | Keeps `documents.search_vector` in step with title and text |
-| `articles_search_vector_trigger`                  | `wiki_articles` | Keeps `articles.search_vector` in step with title and body  |
-| `faces_embedding_labeled_hnsw_idx`                | `init`          | Nearest-neighbour search over confirmed faces only          |
+| What                                                      | Where           | Why                                                                         |
+| --------------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
+| `CREATE EXTENSION vector`                                 | `init`          | Face embeddings                                                             |
+| `reactions_one_target_check`                              | `init`          | A reaction targets a photo or a comment, never both                         |
+| `relationships_not_self_check`                            | `init`          | No one is their own parent or partner                                       |
+| `*_date_range_check` on events, photos, documents         | `init`          | Month 1–12, day 1–31                                                        |
+| `documents_search_vector_trigger`                         | `init`          | Keeps `documents.search_vector` in step with title and text                 |
+| `articles_search_vector_trigger`                          | `wiki_articles` | Keeps `articles.search_vector` in step with title and body                  |
+| `entities_*_trigger` (person, place, event, article)      | `family_graph`  | Gives every person, place, event and wiki topic page a node in `entities`   |
+| `statements_one_value_check`, `statements_not_self_check` | `family_graph`  | A fact points at a node or carries a value, never both, and never at itself |
+| `faces_embedding_labeled_hnsw_idx`                        | `init`          | Nearest-neighbour search over confirmed faces only                          |
 
 ## Local database
 

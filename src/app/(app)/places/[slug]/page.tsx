@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { IconMap, IconPencil, IconPlus } from "@tabler/icons-react";
+import { IconMap, IconPencil, IconPlus, IconTopologyStar3 } from "@tabler/icons-react";
 import { deletePlaceAction } from "@/app/(app)/places/actions";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { EventCard } from "@/components/events/EventCard";
 import { LinkButton } from "@/components/LinkButton";
 import { addressLine } from "@/lib/places/placeEdit";
 import { can } from "@/server/actor";
+import { FactsPanel } from "@/components/graph/FactsPanel";
 import { requireActor } from "@/server/auth/session";
 import { listEvents } from "@/server/events/service";
 import { getPlace } from "@/server/places/service";
@@ -91,6 +92,23 @@ export default async function PlacePage({ params }: { params: Promise<{ slug: st
           </Paper>
         )}
 
+        <Stack gap="sm" component="section" data-testid="node-facts">
+          <Title order={2} fz="h3">
+            More about this place
+          </Title>
+          <FactsPanel actor={actor} nodeKey={`place:${place.slug}`} core={false} />
+          <Group>
+            <LinkButton
+              href={`/graph?center=${encodeURIComponent(`place:${place.slug}`)}`}
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<IconTopologyStar3 size={14} />}
+              data-testid="see-in-graph"
+            >
+              See in the graph
+            </LinkButton>
+          </Group>
+        </Stack>
         <Stack gap="sm" component="section" data-testid="place-events">
           <Group justify="space-between" align="center">
             <Title order={2} fz="h3">
