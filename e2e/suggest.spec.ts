@@ -27,6 +27,9 @@ const card = (page: Page, text: string) =>
 test("what someone writes about a person is read for facts, which they accept or reject on the page", async ({
   page,
 }) => {
+  // The longest journey in the suite: two people, three saves, four decisions.
+  // On a slow day for the hosted database it does not fit in thirty seconds.
+  test.slow();
   await signIn(page, PHONES.contributor);
   const husband = unique("Suggest Husband");
   const wife = unique("Suggest Wife");
