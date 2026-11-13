@@ -61,12 +61,14 @@ test("what someone writes about a person is read for facts, which they accept or
   // Nothing is recorded until someone says so.
   await expect(shown(page, "person-lifespan")).toHaveCount(0);
 
+  // Accepting records the fact and draws the whole profile again; against a
+  // database far away that can take longer than the usual five seconds.
   await born.getByTestId("claim-accept").click();
-  await expect(facts(page).getByTestId("claim-card")).toHaveCount(1);
+  await expect(facts(page).getByTestId("claim-card")).toHaveCount(1, { timeout: 20_000 });
   await expect(shown(page, "person-lifespan")).toContainText("1931");
 
   await card(page, "married").getByTestId("claim-accept").click();
-  await expect(facts(page).getByTestId("claim-card")).toHaveCount(0);
+  await expect(facts(page).getByTestId("claim-card")).toHaveCount(0, { timeout: 20_000 });
   // The marriage is on record, and names the page as where it came from.
   await shown(page, "person-event-link").filter({ hasText: "marry" }).click();
   await expect(shown(page, "event-date")).toHaveText("1955");
