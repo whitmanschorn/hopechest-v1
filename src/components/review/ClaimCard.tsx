@@ -30,6 +30,8 @@ export interface ClaimCardData {
   reviewedBy: string | null;
   reviewNote: string | null;
   appliedHref: string | null;
+  /** For a card shown on the very page it came from. */
+  hideSource?: boolean;
 }
 
 /** One proposed fact: what it says, where it came from, what accepting would do. */
@@ -89,7 +91,7 @@ export function ClaimCard({ claim }: { claim: ClaimCardData }) {
               )}
               {" · "}
             </>
-          ) : (
+          ) : claim.hideSource ? null : (
             "No source given · "
           )}
           proposed by {claim.proposedBy}, {claim.proposedOn}

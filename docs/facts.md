@@ -27,6 +27,33 @@ facts**: a change that has been described but not made. A person accepts or reje
 
 A document that an accepted or waiting fact points to cannot be deleted.
 
+## Facts from what people write
+
+A person's wiki page (`docs/wiki.md`) is read for facts each time it is saved. Saving is not held
+up: the reading happens just after, and the suggestions appear on the person's page under their
+story a few seconds later, each with the sentence it came from and Accept and Reject. "Look for
+facts in this page" reads it again on request.
+
+What is looked for: a birth or death date, a family name at birth or a nickname of the person the
+page is about, and dated events in their life that involve only people already in the records.
+
+A suggestion is only made when a program can check it:
+
+- the sentence quoted must really be in the page;
+- it may change only the person the page is about;
+- every person an event names must already exist.
+
+Anything the model says beyond that is dropped. A fact that was offered before, whether it is
+waiting, accepted or rejected, is not offered again, so rejecting something settles it.
+
+An accepted fact names the page as its source ("Lucille Bluth’s page in the wiki").
+
+The model is DeepSeek where `DEEPSEEK_API_KEY` is set (`.env.example` lists the settings). The
+page's text, the person's recorded facts and the list of people's names are sent to it. Without a
+key, deployments other than production use a stand-in that understands a few fixed sentences
+("born in 1931", "married [[Someone]] in 1955"), which is what the specs run against; production
+without a key does not read pages at all.
+
 ## Proposing
 
 Assistants propose with the `propose_fact` MCP tool, and programs with `POST /api/v1/claims`:
@@ -64,4 +91,4 @@ assistants to propose anything they read or worked out.
 - `e2e/claims.spec.ts` covers proposing through the API, accepting and rejecting on the website,
   and the source showing on the event.
 
-Next: reading facts out of documents automatically, which will feed this queue.
+Not yet: reading documents and topic pages the same way.
