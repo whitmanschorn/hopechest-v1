@@ -10,6 +10,7 @@ import { PhotoTalk } from "@/components/photos/PhotoTalk";
 import { TextLink } from "@/components/TextLink";
 import { describe } from "@/lib/fuzzyDate";
 import { requireActor } from "@/server/auth/session";
+import { countPhotoFaces } from "@/server/faces/service";
 import { listPersonOptions } from "@/server/people/service";
 import { listAlbumOptions } from "@/server/albums/service";
 import { getPhoto } from "@/server/photos/service";
@@ -23,10 +24,11 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
   const actor = await requireActor("read");
   const photo = await getPhoto(actor, (await params).id);
   if (!photo) notFound();
-  const [people, albums, talk] = await Promise.all([
+  const [people, albums, talk, unnamed] = await Promise.all([
     photo.canEdit ? listPersonOptions(actor) : [],
     photo.canEdit ? listAlbumOptions(actor) : [],
     getPhotoTalk(actor, photo.id),
+    photo.canEdit ? countPhotoFaces(actor, photo.id) : 0,
   ]);
 
   // What the form starts with: an exact date goes back in as typed-style text.
@@ -131,6 +133,15 @@ export default async function PhotoPage({ params }: { params: Promise<{ id: stri
             when: DAY.format(at),
           }))}
         />
+
+        {unnamed > 0 && (
+          <Text data-testid="photo-unnamed-faces">
+            {unnamed === 1
+              ? "There is a face in this photo nobody has named. "
+              : `There are ${unnamed} faces in this photo nobody has named. `}
+            <TextLink href={`/review/faces?photo=${photo.id}`}>Say who</TextLink>
+          </Text>
+        )}
 
         {photo.canEdit && (
           <Paper p="md" radius="md" withBorder bg="var(--hc-surface)">
