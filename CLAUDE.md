@@ -28,6 +28,7 @@ places, and an Ask feature that answers from it. One deployment serves one famil
 | `npx playwright test e2e/<file>.spec.ts` | One feature's specs                                                         |
 | `npx playwright test --last-failed`      | Re-run only what failed                                                     |
 | `npm run test:smoke`                     | Specs tagged `@smoke`                                                       |
+| `npm run eval:ask`                       | Put the Bluth questions to Ask and grade the answers (`docs/ask.md`)        |
 | `npm run pr-size`                        | Changed-line count against `origin/main`                                    |
 | `npm run hopechest -- <command>`         | The command-line tool (`docs/cli.md`)                                       |
 | `npm run db:up`                          | Start local Postgres (Docker, port 54329)                                   |
@@ -160,6 +161,16 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   a scripted stand-in without one (never in production); specs run against the stand-in.
 - What a model says is never trusted as it comes: `readFacts` (`src/lib/facts/prompt.ts`) keeps
   only facts a program can check, and they are proposed, not recorded.
+
+## Ask
+
+- `docs/ask.md` is the design. The model gets only the read-only tools named in `ASK_TOOLS`
+  (`src/lib/ask/prompt.ts`), each run through its REST route as the person asking. Never give
+  it a tool that changes anything, and never run its lookups as anyone else.
+- An answer's citations are checked by `readAnswer` (`src/lib/ask/cite.ts`) against what the
+  lookups returned. Do not show a citation that has not been through it.
+- `npm run eval:ask` grades real answers on the Bluth questions; run it after changing the
+  prompt, the tools or the model. Specs use the stand-in (`src/lib/ask/fake.ts`).
 
 ## UI
 
