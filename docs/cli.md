@@ -2,7 +2,7 @@
 
 `hopechest` reads and changes a chest from a terminal. It calls the REST API (`docs/api.md`), so it
 can do what an API key may do and nothing more. It is also where bulk work lives: `hopechest ingest` brings in a folder of scans
-(`docs/ingest.md`), and face detection will be added to it.
+(`docs/ingest.md`), and `hopechest scan-faces` finds the faces in photos (`docs/faces.md`).
 
 ## Setting up
 

@@ -50,14 +50,19 @@ const plain = (html: string | undefined) =>
 
 const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
-/** Commons limits how fast files may be fetched: go slowly, and wait when told to. */
+/**
+ * Commons limits how fast files may be fetched, and says how long to stay away
+ * when the limit is passed (often ten minutes). Go slowly and do as it asks.
+ */
 async function download(url: string): Promise<Response> {
   for (let attempt = 1; ; attempt += 1) {
-    await wait(1500);
+    await wait(3000);
     const response = await fetch(url, { headers: HEADERS });
-    if (response.status !== 429 || attempt === 5) return response;
+    if (response.status !== 429 || attempt === 3) return response;
     const asked = Number(response.headers.get("retry-after"));
-    await wait((Number.isFinite(asked) && asked > 0 ? Math.min(asked, 60) : 10 * attempt) * 1000);
+    const seconds = Number.isFinite(asked) && asked > 0 ? Math.min(asked, 900) : 60;
+    console.log(`  Commons asked for a pause of ${Math.ceil(seconds / 60)} min...`);
+    await wait(seconds * 1000);
   }
 }
 
@@ -176,7 +181,7 @@ async function main(): Promise<number> {
     }
     await wait(400);
   }
-  console.log(`\n${saved} pictures in ${out}`);
+  console.log(`\n${saved} pictures in ${out}. Run again to fetch any that were missed.`);
   console.log(`Next: npm run hopechest -- ingest "${out}" --label "Cast photos"`);
   return 0;
 }
