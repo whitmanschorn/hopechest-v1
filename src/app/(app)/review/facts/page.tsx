@@ -6,6 +6,7 @@ import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { ACTION_LABELS, describeArgs } from "@/lib/claims/actions";
 import { requireActor } from "@/server/auth/session";
 import { listClaims } from "@/server/claims/service";
+import { countWaitingFaces } from "@/server/faces/service";
 
 export const metadata: Metadata = { title: "Proposed facts · Hopechest" };
 
@@ -24,7 +25,10 @@ export default async function FactsPage({
   const actor = await requireActor("write");
   const wanted = (await searchParams).status ?? "proposed";
   const status = STATUSES.some((entry) => entry.value === wanted) ? wanted : "proposed";
-  const { claims, waiting } = await listClaims(actor, { status });
+  const [{ claims, waiting }, faces] = await Promise.all([
+    listClaims(actor, { status }),
+    countWaitingFaces(actor),
+  ]);
 
   return (
     <Container size="md" py="xl">
@@ -38,7 +42,7 @@ export default async function FactsPage({
             Accepting one records it and keeps the link to where it came from.
           </Text>
         </div>
-        <ReviewTabs current="facts" waitingFacts={waiting} />
+        <ReviewTabs current="facts" waitingFacts={waiting} waitingFaces={faces} />
 
         <Group gap={6}>
           {STATUSES.map((entry) => (

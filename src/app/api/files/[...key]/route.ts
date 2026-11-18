@@ -1,14 +1,15 @@
 import { isSafeKey } from "@/lib/photos/keys";
 import { can } from "@/server/actor";
-import { currentActor } from "@/server/auth/session";
+import { actorFromRequest } from "@/server/api/http";
 import { getStorage } from "@/server/storage";
 
 /**
- * Serves a stored photo or document to signed-in family members only. Stored
+ * Serves a stored photo or document to signed-in family members and API keys only. Stored
  * files have no public address; this is the one way to read them.
  */
-export async function GET(_: Request, { params }: { params: Promise<{ key: string[] }> }) {
-  const actor = await currentActor();
+export async function GET(request: Request, { params }: { params: Promise<{ key: string[] }> }) {
+  // A signed-in member, or a program with a key (the face scan reads photos this way).
+  const actor = await actorFromRequest(request);
   if (!actor || !can(actor, "read")) return new Response("Sign in to see this.", { status: 401 });
 
   const key = (await params).key.join("/");

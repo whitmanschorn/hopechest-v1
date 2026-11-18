@@ -16,7 +16,9 @@ import {
 } from "./lib/args.ts";
 import { parseSidecar } from "../src/lib/ingest/sidecar.ts";
 import { convertFacebookExport } from "./facebook.ts";
+import { runScan } from "./faces.ts";
 import { runIngest } from "./ingest.ts";
+import { loadDetector } from "./lib/detect.ts";
 import { callApi, UnreachableError } from "./lib/api.ts";
 import { resolveTarget, type Target } from "./lib/config.ts";
 
@@ -44,6 +46,7 @@ Commands
   routes${" ".repeat(Math.max(1, width - 4))}Every route of the REST API
   ingest${" ".repeat(Math.max(1, width - 4))}Bring in a folder of pictures and documents (see below)
   facebook-export${" ".repeat(Math.max(1, width - 13))}Turn a Facebook export into a folder to ingest
+  scan-faces${" ".repeat(Math.max(1, width - 8))}Find the faces in photos not yet looked over (see below)
 ${commands}
 
 Any route directly
@@ -57,6 +60,13 @@ Bringing in a folder
   New photos wait in the review queue until someone publishes them. Safe to
   run again: files already in the chest are not sent twice. A picture's own
   details go in a JSON file beside it (slide-001.json); see docs/ingest.md.
+
+Faces
+  hopechest scan-faces [limit=<how many photos>] [photo=<id>]
+  Finds faces on this computer and sends where they are; no photo leaves the
+  chest for anywhere else. Safe to stop and run again. With photo=, looks
+  over that one photo again. Then name them on the
+  website under Review, "Who is this?". See docs/faces.md.
 
 From Facebook
   hopechest facebook-export <unzipped-export-folder> --out <folder>
@@ -140,6 +150,28 @@ async function main(argv: string[]): Promise<number> {
   if (command === "ingest") return ingest(line);
   if (Object.keys(line.options).length > 0) {
     throw new UsageError(`--${Object.keys(line.options)[0]} only goes with "hopechest ingest".`);
+  }
+
+  if (command === "scan-faces") {
+    const asked = Object.fromEntries(
+      line.rest.map((word) => {
+        const pair = /^(limit|photo)=(.+)$/.exec(word);
+        if (!pair || (pair[1] === "limit" && !/^\d+$/.test(pair[2]))) {
+          throw new UsageError(
+            "Usage: hopechest scan-faces [limit=<how many photos>] [photo=<id>]",
+          );
+        }
+        return [pair[1], pair[2]];
+      }),
+    );
+    const report = await runScan(
+      resolveTarget(line.env, process.env),
+      loadDetector,
+      { limit: asked.limit ? Number(asked.limit) : undefined, photo: asked.photo },
+      (text) => console.error(text),
+    );
+    console.log(JSON.stringify(report, null, 2));
+    return report.failed.length > 0 ? 1 : 0;
   }
 
   if (command === "whoami" || command === "routes") {

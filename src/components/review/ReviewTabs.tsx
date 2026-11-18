@@ -1,13 +1,16 @@
 import { Group } from "@mantine/core";
 import { LinkButton } from "@/components/LinkButton";
 
-/** The two things that wait for review: arrivals (photos, documents) and proposed facts. */
+/** The things that wait for review: arrivals (photos, documents), unnamed faces and proposed facts. */
 export function ReviewTabs({
   current,
   waitingFacts,
+  waitingFaces,
 }: {
-  current: "arrivals" | "facts";
+  current: "arrivals" | "faces" | "facts";
   waitingFacts: number;
+  /** Left out where it is not known; the tab then shows no number. */
+  waitingFaces?: number;
 }) {
   return (
     <Group gap={6} data-testid="review-tabs">
@@ -17,6 +20,13 @@ export function ReviewTabs({
         data-testid="review-tab-arrivals"
       >
         Photos and documents
+      </LinkButton>
+      <LinkButton
+        href="/review/faces"
+        variant={current === "faces" ? "light" : "subtle"}
+        data-testid="review-tab-faces"
+      >
+        Who is this?{waitingFaces ? ` (${waitingFaces})` : ""}
       </LinkButton>
       <LinkButton
         href="/review/facts"

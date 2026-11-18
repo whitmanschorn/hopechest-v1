@@ -108,4 +108,4 @@ Assistants can review too: `list_ingest_batches`, `get_ingest_batch`, `update_ph
 - `e2e/ingest.spec.ts` runs the real command on a folder, then reviews and publishes the batch in
   the browser.
 
-Not here yet: HEIC pictures, Word files, and face detection.
+Not here yet: HEIC pictures and Word files. Faces are found afterwards, with `hopechest scan-faces` (`docs/faces.md`).

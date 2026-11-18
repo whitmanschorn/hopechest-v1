@@ -34,6 +34,7 @@ of date. In short:
 | Documents      | list and search by words, get, add from text, change (including setting the text), delete                                                              |
 | Wiki           | list pages, read and write a topic page or a person's page, page history (`docs/wiki.md`)                                                              |
 | Graph          | find nodes, read a node's facts, state, rank and remove facts, the vocabulary, what is around a node, how two nodes are connected (`docs/ontology.md`) |
+| Faces          | photos to scan, store what a scan found; the unnamed faces in groups; name, rule out, set aside                                                        |
 | Ingest         | start a batch, add a file to it, finish it; list, date, publish and discard for review                                                                 |
 | Proposed facts | propose, list, accept, reject (`docs/facts.md`)                                                                                                        |
 

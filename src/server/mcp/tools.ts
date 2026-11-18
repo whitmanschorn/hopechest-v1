@@ -601,6 +601,47 @@ export const TOOLS: readonly McpTool[] = [
 
   // ── reviewing bulk arrivals ──
   {
+    name: "list_unnamed_faces",
+    title: "Faces nobody has named",
+    description:
+      "Faces found in photos that nobody has named yet, in groups that are probably one person each, biggest group first. A group may carry a `suggestion`: a person it looks like (from faces already named) or who is tagged in those photos. Each face has the address of its photo. You cannot see who a face is from this alone: name faces only when the person you are helping tells you who they are, or confirms a suggestion.",
+    route: "GET faces",
+    input: {
+      photo: z.string().optional().describe("Id of one photo, for only the faces in it"),
+      page: z.number().int().optional().describe("Which page of groups; the first is 1"),
+    },
+  },
+  {
+    name: "name_faces",
+    title: "Say whose faces these are",
+    description:
+      "Record that these faces (ids from list_unnamed_faces) are one person. Each becomes a tag on its photo, and helps recognise that person in other photos. Only when the person you are helping has said who it is.",
+    route: "POST faces/name",
+    input: {
+      faces: z.array(z.string()).describe("Ids of the faces"),
+      person: slug("the person they are"),
+    },
+  },
+  {
+    name: "rule_out_faces",
+    title: "Say who faces are not",
+    description:
+      "Record that these faces are NOT a person, so that person stops being suggested for them. The faces stay unnamed.",
+    route: "POST faces/reject",
+    input: {
+      faces: z.array(z.string()).describe("Ids of the faces"),
+      person: slug("the person they are not"),
+    },
+  },
+  {
+    name: "set_faces_aside",
+    title: "Set faces aside",
+    description:
+      "Take faces out of the queue as nobody to name: a stranger in the background, a statue, something that is not a face.",
+    route: "POST faces/ignore",
+    input: { faces: z.array(z.string()).describe("Ids of the faces") },
+  },
+  {
     name: "list_ingest_batches",
     title: "List batches of arrivals",
     description:

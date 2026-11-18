@@ -93,6 +93,9 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   (`src/server/actor.ts`). Never check roles in components or actions instead.
 - Server components cannot pass `component={Link}` to Mantine; use
   `src/components/LinkButton.tsx` or `src/components/TextLink.tsx`.
+- Every `<Link>` (and `component={Link}`) carries `prefetch={false}`. Without it Next draws each
+  linked page, with its queries, as soon as the link is on screen: about ten times the database
+  work per page view. A unit test fails on a link without it.
 
 ## API
 
@@ -117,6 +120,15 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
 - Every source (scans, Facebook) is first turned into a folder of pictures and documents with
   JSON sidecars (`src/lib/ingest/sidecar.ts`), so there is one way in. `docs/facebook.md` covers
   the export converter and the procedure for capturing in the browser.
+
+## Faces
+
+- `docs/faces.md` is the design. The model runs only in the command-line tool
+  (`hopechest scan-faces`, `cli/lib/detect.ts`); the server stores what it found and does
+  arithmetic on vectors (`src/server/faces/`, `src/lib/faces/`). Never import the model from `src/`.
+- A face gets a `personId` only when a person says so (`nameFaces`), or when it sits under a box
+  someone drew. Guesses are computed on each visit and never stored.
+- Specs send made-up vectors through the API; they never run the model on other specs' photos.
 
 ## Documents
 

@@ -299,6 +299,16 @@ export async function updatePhoto(
         personId: { in: [...had].filter((personId) => !wanted.has(personId)) },
       },
     });
+    // A face named as someone since untagged goes back to unnamed, and is not
+    // offered that name again.
+    const removed = [...had].filter((personId) => !wanted.has(personId));
+    if (removed.length > 0) {
+      await tx.$executeRaw`
+        UPDATE faces
+        SET rejected_person_ids = array_append(rejected_person_ids, person_id),
+            person_id = NULL, confirmed_at = NULL
+        WHERE photo_id = ${id}::uuid AND person_id = ANY(${removed}::uuid[])`;
+    }
     await tx.photoPerson.createMany({
       data: [...wanted]
         .filter((personId) => !had.has(personId))

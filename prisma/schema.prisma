@@ -487,6 +487,10 @@ model Photo {
   dateDeduced      Boolean        @default(false) @map("date_deduced")
   dateClue         String?        @map("date_clue")
   dateSortKey      Int?           @map("date_sort_key")
+  /// The face model this photo was last looked over with; null means never.
+  /// A photo with no faces in it still gets this, so it is not looked at again.
+  facesModel       String?        @map("faces_model")
+  facesScannedAt   DateTime?      @map("faces_scanned_at") @db.Timestamptz
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -506,6 +510,7 @@ model Photo {
   @@index([dateMonth, dateDay])
   @@index([dateSortKey])
   @@index([placeId])
+  @@index([facesModel])
   @@map("photos")
 }
 

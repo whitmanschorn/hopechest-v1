@@ -100,6 +100,7 @@ export function AddRelative({
               Not in the chest yet?{" "}
               <Anchor
                 component={Link}
+                prefetch={false}
                 href={`/people/new?of=${slug}&as=${role}`}
                 data-testid="relative-new"
               >
