@@ -31,6 +31,7 @@ export function AnswerBody({ text, citations }: { text: string; citations: Citat
       ) : href(piece.number) ? (
         <Anchor
           component={Link}
+          prefetch={false}
           key={`${key}-${index}`}
           href={href(piece.number)!}
           className={classes.cite}
@@ -61,7 +62,13 @@ export function AnswerBody({ text, citations }: { text: string; citations: Citat
             <li key={entry.number}>
               <span>{entry.number}.</span>
               <span>
-                <Anchor component={Link} href={entry.href} fz="sm" data-testid="ask-source">
+                <Anchor
+                  component={Link}
+                  prefetch={false}
+                  href={entry.href}
+                  fz="sm"
+                  data-testid="ask-source"
+                >
                   {entry.label}
                 </Anchor>{" "}
                 <Text span c="dimmed" fz="sm">
