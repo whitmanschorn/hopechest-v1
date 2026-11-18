@@ -218,6 +218,7 @@ export default async function GraphPage({ searchParams }: { searchParams: Promis
                 const at = spot.get(node.key)!;
                 return (
                   <Link
+                    prefetch={false}
                     key={node.key}
                     href={address({ ...view, center: node.key })}
                     className={classes.node}

@@ -11,5 +11,5 @@ export function LinkButton({
   href,
   ...props
 }: ButtonProps & { href: string; "data-testid"?: string }) {
-  return <Button component={Link} href={href} {...props} />;
+  return <Button component={Link} prefetch={false} href={href} {...props} />;
 }

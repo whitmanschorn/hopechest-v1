@@ -94,6 +94,9 @@ Ask first, or use `npm run db:seed`, which repairs seeded rows without erasing a
   (`src/server/actor.ts`). Never check roles in components or actions instead.
 - Server components cannot pass `component={Link}` to Mantine; use
   `src/components/LinkButton.tsx` or `src/components/TextLink.tsx`.
+- Every `<Link>` (and `component={Link}`) carries `prefetch={false}`. Without it Next draws each
+  linked page, with its queries, as soon as the link is on screen: about ten times the database
+  work per page view. A unit test fails on a link without it.
 
 ## API
 
