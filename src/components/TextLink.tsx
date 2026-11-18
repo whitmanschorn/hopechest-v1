@@ -11,5 +11,5 @@ export function TextLink({
   href,
   ...props
 }: AnchorProps & { href: string; children: React.ReactNode; "data-testid"?: string }) {
-  return <Anchor component={Link} href={href} {...props} />;
+  return <Anchor component={Link} prefetch={false} href={href} {...props} />;
 }

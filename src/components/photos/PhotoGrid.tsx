@@ -14,6 +14,7 @@ export function PhotoGrid({ photos }: { photos: PhotoCard[] }) {
     <div className={classes.grid} data-testid="photo-grid">
       {photos.map((photo) => (
         <Link
+          prefetch={false}
           key={photo.id}
           href={`/photos/${photo.id}`}
           className={classes.tile}
