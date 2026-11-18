@@ -13,6 +13,7 @@ export function PlaceCard({ place }: { place: PlaceView }) {
       : null;
   return (
     <Link
+      prefetch={false}
       href={`/places/${place.slug}`}
       className={classes.card}
       data-testid={`place-${place.slug}`}
