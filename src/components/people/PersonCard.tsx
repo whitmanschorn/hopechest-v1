@@ -40,6 +40,7 @@ export function PersonCard({
 }) {
   return (
     <Link
+      prefetch={false}
       href={`/people/${person.slug}`}
       className={classes.card}
       data-testid={testId ?? `person-${person.slug}`}

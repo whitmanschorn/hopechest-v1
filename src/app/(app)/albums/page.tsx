@@ -43,6 +43,7 @@ export default async function AlbumsPage() {
           <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="lg" data-testid="album-list">
             {albums.map((album) => (
               <Link
+                prefetch={false}
                 key={album.id}
                 href={`/albums/${album.id}`}
                 className={classes.card}

@@ -55,6 +55,7 @@ export default function LeafletMap({ pins }: { pins: MapPin[] }) {
         >
           <Popup>
             <Link
+              prefetch={false}
               href={`/places/${pin.slug}`}
               className={classes.popupLink}
               data-testid={`map-link-${pin.slug}`}

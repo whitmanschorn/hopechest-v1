@@ -1,0 +1,59 @@
+.question {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--mantine-primary-color-light);
+}
+
+.answer {
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--hc-hairline);
+  border-radius: var(--mantine-radius-md);
+  background: var(--hc-surface);
+}
+
+.answer p {
+  margin: 0;
+}
+
+.answer p + p,
+.answer p + ul,
+.answer ul + p {
+  margin-top: var(--mantine-spacing-xs);
+}
+
+.answer ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.cite {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 1px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.sources {
+  margin: var(--mantine-spacing-sm) 0 0;
+  padding: var(--mantine-spacing-xs) 0 0;
+  border-top: 1px solid var(--hc-hairline);
+  list-style: none;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.sources li {
+  display: flex;
+  gap: 6px;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+}

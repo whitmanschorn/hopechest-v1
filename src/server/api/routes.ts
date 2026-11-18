@@ -4,6 +4,7 @@ import { dateToText, toEventFormInput, type EventFormInput } from "@/lib/events/
 import { toFormInput, type PersonFormInput } from "@/lib/people/personEdit";
 import { toPlaceFormInput, type PlaceFormInput } from "@/lib/places/placeEdit";
 import type { Actor, Permission } from "@/server/actor";
+import { ask } from "@/server/ask/service";
 import {
   addFact,
   createPredicate,
@@ -952,6 +953,32 @@ export const ROUTES: readonly ApiRoute[] = [
         status: result.status,
         body: { error: result.status === 404 ? "not_found" : "decided", message: result.message },
       };
+    },
+  },
+
+  // ── ask ──
+  {
+    method: "POST",
+    path: "ask",
+    needs: "read",
+    summary:
+      "Ask a question in plain words; the chest's own model answers from what is recorded, with the sources it used. Each call stands alone. Slower than the other routes (several seconds).",
+    fields:
+      'question, as (slug of the person asking, so that "my grandma" means something; optional)',
+    run: async ({ actor, body }) => {
+      const result = await ask(actor, {
+        question: asText(body.question),
+        as: asText(body.as) || undefined,
+      });
+      if (!result.ok) {
+        const error = { 404: "not_found", 422: "invalid", 429: "slow_down", 503: "unavailable" };
+        return {
+          status: result.status,
+          body: { error: error[result.status], message: result.message },
+        };
+      }
+      const { text, citations, steps, model } = result.answer;
+      return ok({ answer: text, citations, steps, model });
     },
   },
 

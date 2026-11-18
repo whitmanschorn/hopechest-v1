@@ -5,6 +5,7 @@ import {
   IconHome,
   IconMap,
   IconMapPin,
+  IconMessageQuestion,
   IconNotebook,
   IconPhoto,
   IconSettings,
@@ -30,6 +31,7 @@ export interface NavItem {
  */
 export const NAV: readonly NavItem[] = [
   { href: "/home", label: "Home", icon: IconHome },
+  { href: "/ask", label: "Ask", icon: IconMessageQuestion },
   { href: "/people", label: "People", icon: IconUsers },
   { href: "/photos", label: "Photos", icon: IconPhoto },
   { href: "/albums", label: "Albums", icon: IconBooks },
