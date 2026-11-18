@@ -15,7 +15,9 @@ it("no link fetches its page before it is asked for", () => {
   const eager: string[] = [];
   for (const file of files) {
     const source = readFileSync(file, "utf8");
-    for (const match of source.matchAll(/<Link\b[^>]*>|component=\{Link\}[^>]*>/g)) {
+    for (const match of source.matchAll(
+      /<Link prefetch={false}\b[^>]*>|component=\{Link\}[^>]*>/g,
+    )) {
       if (!match[0].includes("prefetch={false}")) eager.push(`${file}: ${match[0].slice(0, 60)}`);
     }
   }

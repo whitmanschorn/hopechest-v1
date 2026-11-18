@@ -85,6 +85,7 @@ export function FaceGroupCard({
                 />
               </button>
               <Link
+                prefetch={false}
                 href={`/photos/${face.photoId}`}
                 className={classes.open}
                 aria-label="See the whole photo"
