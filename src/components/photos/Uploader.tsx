@@ -182,6 +182,7 @@ export function Uploader({
                   {item.status.state === "done" && (
                     <Anchor
                       component={Link}
+                      prefetch={false}
                       href={`/photos/${item.status.id}`}
                       data-testid="upload-link"
                     >
@@ -205,6 +206,7 @@ export function Uploader({
             <Group>
               <Button
                 component={Link}
+                prefetch={false}
                 href={album ? `/albums/${album.id}` : "/photos"}
                 data-testid="upload-done"
               >

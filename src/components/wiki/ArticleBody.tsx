@@ -34,13 +34,14 @@ export function ArticleBody({
       const href = resolve(node.target);
       if (href) {
         return (
-          <Link key={index} href={href} data-testid="wiki-link">
+          <Link prefetch={false} key={index} href={href} data-testid="wiki-link">
             {node.label}
           </Link>
         );
       }
       return canCreate ? (
         <Link
+          prefetch={false}
           key={index}
           href={newPath(node.target)}
           className={classes.missing}

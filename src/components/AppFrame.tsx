@@ -61,7 +61,12 @@ export function AppFrame({
               aria-label="Menu"
               data-testid="nav-burger"
             />
-            <UnstyledButton component={Link} href="/home" data-testid="chest-home-link">
+            <UnstyledButton
+              component={Link}
+              prefetch={false}
+              href="/home"
+              data-testid="chest-home-link"
+            >
               <Title order={3} component="span" data-testid="chest-title">
                 {chestName}
               </Title>
@@ -110,6 +115,7 @@ export function AppFrame({
           <NavLink
             key={item.href}
             component={Link}
+            prefetch={false}
             href={item.href}
             label={item.label}
             leftSection={<item.icon size={20} stroke={1.5} />}

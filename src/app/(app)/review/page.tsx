@@ -49,6 +49,7 @@ export default async function ReviewPage() {
           <Stack gap="sm" data-testid="batch-list">
             {batches.map((batch) => (
               <Link
+                prefetch={false}
                 key={batch.id}
                 href={`/review/${batch.id}`}
                 className={classes.batch}
